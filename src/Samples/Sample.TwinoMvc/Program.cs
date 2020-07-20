@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Sample.Ioc
+namespace Sample.TwinoMvc
 {
     class Program
     {
