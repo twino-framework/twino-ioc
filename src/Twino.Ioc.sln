@@ -4,6 +4,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Ioc", "Twino.Ioc\Twin
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Ioc", "Test.Ioc\Test.Ioc.csproj", "{F30910E4-0382-4004-8F11-04BCE06B5767}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{9253F219-DBCA-48A1-8369-4ED535D39BA9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Ioc", "Samples\Sample.Ioc\Sample.Ioc.csproj", "{0062653A-9A78-47E2-BC30-4E6DE4FA2BE6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.TwinoMvc", "Samples\Sample.TwinoMvc\Sample.TwinoMvc.csproj", "{F7A0BB79-4B69-4E0C-8FCF-EF3A02B0EED7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +24,17 @@ Global
 		{F30910E4-0382-4004-8F11-04BCE06B5767}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F30910E4-0382-4004-8F11-04BCE06B5767}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F30910E4-0382-4004-8F11-04BCE06B5767}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0062653A-9A78-47E2-BC30-4E6DE4FA2BE6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0062653A-9A78-47E2-BC30-4E6DE4FA2BE6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0062653A-9A78-47E2-BC30-4E6DE4FA2BE6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0062653A-9A78-47E2-BC30-4E6DE4FA2BE6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F7A0BB79-4B69-4E0C-8FCF-EF3A02B0EED7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7A0BB79-4B69-4E0C-8FCF-EF3A02B0EED7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7A0BB79-4B69-4E0C-8FCF-EF3A02B0EED7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7A0BB79-4B69-4E0C-8FCF-EF3A02B0EED7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{0062653A-9A78-47E2-BC30-4E6DE4FA2BE6} = {9253F219-DBCA-48A1-8369-4ED535D39BA9}
+		{F7A0BB79-4B69-4E0C-8FCF-EF3A02B0EED7} = {9253F219-DBCA-48A1-8369-4ED535D39BA9}
 	EndGlobalSection
 EndGlobal

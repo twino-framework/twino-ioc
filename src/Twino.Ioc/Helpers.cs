@@ -9,6 +9,9 @@ namespace Twino.Ioc
 {
     internal static class Helpers
     {
+        /// <summary>
+        /// Creates readable string fullname of a type with generic parameters
+        /// </summary>
         internal static string ToTypeString(this Type type)
         {
             if (!type.IsGenericType)
