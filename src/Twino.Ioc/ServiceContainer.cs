@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Twino.Ioc.Exceptions;
@@ -883,7 +884,15 @@ namespace Twino.Ioc
                     break;
             }
 
-            ServiceDescriptor descriptor = new ServiceDescriptor(impl, item.ServiceType, item.ImplementationType, true, item.ImplementationInstance)
+            Type implementationType = item.ImplementationType;
+            if (implementationType == null)
+            {
+                implementationType = item.ImplementationInstance != null
+                                         ? item.ImplementationInstance.GetType()
+                                         : item.ServiceType;
+            }
+
+            ServiceDescriptor descriptor = new ServiceDescriptor(impl, item.ServiceType, implementationType, true, item.ImplementationInstance)
                                            {
                                                MicrosoftServiceDescriptor = item,
                                                ImplementationFactory = item.ImplementationFactory
