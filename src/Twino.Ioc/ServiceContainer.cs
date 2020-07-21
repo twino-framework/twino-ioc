@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Twino.Ioc.Exceptions;
@@ -819,7 +818,7 @@ namespace Twino.Ioc
         /// </summary>
         public object GetService(Type serviceType)
         {
-            return Get(serviceType);
+            return Get(serviceType).GetAwaiter().GetResult();
         }
 
         #endregion
@@ -912,6 +911,9 @@ namespace Twino.Ioc
 
                 case ImplementationType.Singleton:
                     lifetime = ServiceLifetime.Singleton;
+                    if (descriptor.Instance != null)
+                        return new Microsoft.Extensions.DependencyInjection.ServiceDescriptor(descriptor.ServiceType, descriptor.Instance);
+
                     break;
 
                 default:
@@ -1014,29 +1016,54 @@ namespace Twino.Ioc
 
         /// <summary>
         /// Method is added to IServiceContainer implementation of Microsoft Extensions.
-        /// throws NotImplementedException
         /// </summary>
         public void CopyTo(Microsoft.Extensions.DependencyInjection.ServiceDescriptor[] array, int arrayIndex)
         {
-            throw new NotSupportedException();
+            foreach (ServiceDescriptor descriptor in _items.Values)
+            {
+                if (descriptor.MicrosoftServiceDescriptor != null)
+                    array[arrayIndex] = descriptor.MicrosoftServiceDescriptor;
+                else
+                    array[arrayIndex] = MapToExtensionDescriptor(descriptor);
+
+                arrayIndex++;
+            }
         }
 
         /// <summary>
         /// Method is added to IServiceContainer implementation of Microsoft Extensions.
-        /// throws NotImplementedException
         /// </summary>
         public int IndexOf(Microsoft.Extensions.DependencyInjection.ServiceDescriptor item)
         {
-            throw new NotSupportedException();
+            int i = 0;
+            foreach (var v in _items.Values)
+            {
+                if (v.MicrosoftServiceDescriptor == item)
+                    return i;
+
+                i++;
+            }
+
+            return -1;
         }
 
         /// <summary>
         /// Method is added to IServiceContainer implementation of Microsoft Extensions.
-        /// throws NotImplementedException
         /// </summary>
         public void RemoveAt(int index)
         {
-            throw new NotSupportedException();
+            Type removeKey = null;
+            int i = 0;
+            foreach (var kv in _items)
+            {
+                if (index == i)
+                    removeKey = kv.Key;
+
+                i++;
+            }
+
+            if (removeKey != null)
+                Remove(removeKey);
         }
 
         /// <summary>
@@ -1045,7 +1072,20 @@ namespace Twino.Ioc
         /// </summary>
         public Microsoft.Extensions.DependencyInjection.ServiceDescriptor this[int index]
         {
-            get => throw new NotSupportedException();
+            get
+            {
+                if (index >= _items.Count)
+                    return null;
+
+                var descriptor = _items.Values.Skip(index).FirstOrDefault();
+                if (descriptor == null)
+                    return null;
+
+                if (descriptor.MicrosoftServiceDescriptor != null)
+                    return descriptor.MicrosoftServiceDescriptor;
+
+                return MapToExtensionDescriptor(descriptor);
+            }
             set => throw new NotSupportedException();
         }
 
