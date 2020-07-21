@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using Twino.Ioc.Exceptions;
 
@@ -49,7 +47,7 @@ namespace Twino.Ioc
         /// <summary>
         /// If the descriptor type is Singleton, this object keeps the singleton object.
         /// </summary>
-        public object Instance { get; set; }
+        public object Instance { get; internal set; }
 
         /// <summary>
         /// Decorator type.
@@ -64,7 +62,7 @@ namespace Twino.Ioc
         /// <summary>
         /// Implementation method
         /// </summary>
-        public ImplementationType Implementation { get; set; }
+        public ImplementationType Implementation { get; }
 
         /// <summary>
         /// If not null, called for creating instance of the object
@@ -94,22 +92,30 @@ namespace Twino.Ioc
         /// <summary>
         /// Creates new service descriptor object
         /// </summary>
-        public ServiceDescriptor(Type serviceType, Type implementationType) : this(serviceType, implementationType, false)
+        public ServiceDescriptor(ImplementationType implementation, Type serviceType, Type implementationType, object instance = null)
+            : this(implementation, serviceType, implementationType, false, instance)
         {
         }
 
         /// <summary>
         /// Creates new service descriptor object
         /// </summary>
-        internal ServiceDescriptor(Type serviceType, Type implementationType, bool findPossibleConstructor)
+        internal ServiceDescriptor(ImplementationType implementation, Type serviceType, Type implementationType, bool findPossibleConstructor, object instance = null)
         {
+            Implementation = implementation;
             ServiceType = serviceType;
             ImplementationType = implementationType;
+            Instance = instance;
 
             if (findPossibleConstructor)
                 Constructors = implementationType.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
             else
+            {
                 Constructors = Helpers.FindUsableConstructors(implementationType);
+
+                if (Constructors == null && Instance == null)
+                    throw new IocConstructorException($"{implementationType.ToTypeString()} does not have a public constructor");
+            }
         }
     }
 }

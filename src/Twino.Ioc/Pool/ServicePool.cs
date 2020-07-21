@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Twino.Ioc.Exceptions;
 
 namespace Twino.Ioc.Pool
 {
@@ -86,6 +87,9 @@ namespace Twino.Ioc.Pool
             }
 
             ImplementationTypeConstructors = Helpers.FindUsableConstructors(typeof(TImplementation));
+            
+            if (ImplementationTypeConstructors == null)
+                throw new IocConstructorException($"{typeof(TImplementation).ToTypeString()} does not have a public constructor");
         }
 
         /// <summary>

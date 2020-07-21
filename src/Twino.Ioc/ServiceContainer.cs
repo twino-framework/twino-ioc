@@ -108,12 +108,10 @@ namespace Twino.Ioc
             if (_items.ContainsKey(serviceType))
                 throw new DuplicateTypeException($"{serviceType.ToTypeString()} service type is already added into service container");
 
-            ServiceDescriptor descriptor = new ServiceDescriptor(serviceType, implementationType)
+            ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Transient, serviceType, implementationType)
                                            {
                                                ProxyType = proxyType,
-                                               Instance = null,
                                                ProxyInstance = null,
-                                               Implementation = ImplementationType.Transient,
                                                AfterCreatedMethod = afterCreated
                                            };
 
@@ -190,12 +188,10 @@ namespace Twino.Ioc
             if (_items.ContainsKey(serviceType))
                 throw new DuplicateTypeException($"{serviceType.ToTypeString()} service type is already added into service container");
 
-            ServiceDescriptor descriptor = new ServiceDescriptor(serviceType, implementationType)
+            ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Scoped, serviceType, implementationType)
                                            {
                                                ProxyType = proxyType,
-                                               Instance = null,
                                                ProxyInstance = null,
-                                               Implementation = ImplementationType.Scoped,
                                                AfterCreatedMethod = afterCreated
                                            };
 
@@ -277,12 +273,7 @@ namespace Twino.Ioc
         /// </summary>
         public void AddSingleton(Type serviceType, Type implementationType)
         {
-            ServiceDescriptor descriptor = new ServiceDescriptor(serviceType, implementationType)
-                                           {
-                                               Instance = null,
-                                               Implementation = ImplementationType.Singleton
-                                           };
-
+            ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Singleton, serviceType, implementationType);
             _items.Add(serviceType, descriptor);
         }
 
@@ -292,12 +283,10 @@ namespace Twino.Ioc
         /// </summary>
         public void AddSingleton(Type serviceType, Type implementationType, Type proxyType)
         {
-            ServiceDescriptor descriptor = new ServiceDescriptor(serviceType, implementationType)
+            ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Singleton, serviceType, implementationType)
                                            {
                                                ProxyType = proxyType,
-                                               ProxyInstance = null,
-                                               Instance = null,
-                                               Implementation = ImplementationType.Singleton
+                                               ProxyInstance = null
                                            };
 
             _items.Add(serviceType, descriptor);
@@ -309,10 +298,8 @@ namespace Twino.Ioc
         /// </summary>
         public void AddSingleton(Type serviceType, Type implementationType, Delegate afterCreated)
         {
-            ServiceDescriptor descriptor = new ServiceDescriptor(serviceType, implementationType)
+            ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Singleton, serviceType, implementationType)
                                            {
-                                               Instance = null,
-                                               Implementation = ImplementationType.Singleton,
                                                AfterCreatedMethod = afterCreated
                                            };
 
@@ -325,12 +312,10 @@ namespace Twino.Ioc
         /// </summary>
         public void AddSingleton(Type serviceType, Type implementationType, Type proxyType, Delegate afterCreated)
         {
-            ServiceDescriptor descriptor = new ServiceDescriptor(serviceType, implementationType)
+            ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Singleton, serviceType, implementationType)
                                            {
                                                ProxyType = proxyType,
-                                               Instance = null,
                                                ProxyInstance = null,
-                                               Implementation = ImplementationType.Singleton,
                                                AfterCreatedMethod = afterCreated
                                            };
 
@@ -343,13 +328,7 @@ namespace Twino.Ioc
         public void AddSingleton(Type serviceType, object instance)
         {
             Type implementationType = instance.GetType();
-
-            ServiceDescriptor descriptor = new ServiceDescriptor(serviceType, implementationType)
-                                           {
-                                               Instance = instance,
-                                               Implementation = ImplementationType.Singleton
-                                           };
-
+            ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Singleton, serviceType, implementationType, instance);
             _items.Add(serviceType, descriptor);
         }
 
@@ -560,11 +539,9 @@ namespace Twino.Ioc
             where TImplementation : class, TService
         {
             ServicePool<TService, TImplementation> pool = new ServicePool<TService, TImplementation>(type, this, options, instance);
-            ServiceDescriptor descriptor = new ServiceDescriptor(typeof(TService), typeof(ServicePool<TService, TImplementation>))
+            ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Singleton, typeof(TService), typeof(ServicePool<TService, TImplementation>), pool)
                                            {
-                                               IsPool = true,
-                                               Instance = pool,
-                                               Implementation = ImplementationType.Singleton
+                                               IsPool = true
                                            };
 
             _items.Add(typeof(TService), descriptor);
@@ -582,12 +559,10 @@ namespace Twino.Ioc
             where TProxy : class, IServiceProxy
         {
             ServicePool<TService, TImplementation, TProxy> pool = new ServicePool<TService, TImplementation, TProxy>(type, this, options, instance);
-            ServiceDescriptor descriptor = new ServiceDescriptor(typeof(TService), typeof(ServicePool<TService, TImplementation>))
+            ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Singleton, typeof(TService), typeof(ServicePool<TService, TImplementation>), pool)
                                            {
                                                IsPool = true,
-                                               ProxyType = typeof(TProxy),
-                                               Instance = pool,
-                                               Implementation = ImplementationType.Singleton
+                                               ProxyType = typeof(TProxy)
                                            };
 
             _items.Add(typeof(TService), descriptor);
@@ -908,10 +883,8 @@ namespace Twino.Ioc
                     break;
             }
 
-            ServiceDescriptor descriptor = new ServiceDescriptor(item.ServiceType, item.ImplementationType, true)
+            ServiceDescriptor descriptor = new ServiceDescriptor(impl, item.ServiceType, item.ImplementationType, true, item.ImplementationInstance)
                                            {
-                                               Instance = item.ImplementationInstance,
-                                               Implementation = impl,
                                                MicrosoftServiceDescriptor = item,
                                                ImplementationFactory = item.ImplementationFactory
                                            };

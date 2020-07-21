@@ -65,9 +65,38 @@ namespace Twino.Ioc
             }
 
             if (dict.Count == 0)
-                throw new IocConstructorException($"{type.ToTypeString()} has multiple constructors but TwinoIocConstructorAttribute could not be found");
+            {
+                ConstructorInfo ctor = FindPossibleConstructor(ctors);
+                if (ctor == null)
+                    return null;
+
+                dict.Add(0, ctor);
+            }
 
             return dict.OrderBy(x => x.Key).Select(x => x.Value).ToArray();
+        }
+
+        private static ConstructorInfo FindPossibleConstructor(ConstructorInfo[] ctors)
+        {
+            foreach (ConstructorInfo ctor in ctors)
+            {
+                bool skip = false;
+                ParameterInfo[] parameters = ctor.GetParameters();
+                foreach (ParameterInfo parameter in parameters)
+                {
+                    if (parameter.ParameterType.IsPrimitive || parameter.ParameterType == typeof(decimal) ||
+                        parameter.ParameterType == typeof(string))
+                    {
+                        skip = true;
+                        break;
+                    }
+                }
+
+                if (!skip)
+                    return ctor;
+            }
+
+            return null;
         }
     }
 }
