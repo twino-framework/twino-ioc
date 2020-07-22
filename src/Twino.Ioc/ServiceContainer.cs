@@ -20,7 +20,12 @@ namespace Twino.Ioc
         /// </summary>
         private readonly Dictionary<Type, ServiceDescriptor> _items;
 
-        #region Init - Dispose
+        /// <summary>
+        /// Options provider for Microsoft.Extensions.Options
+        /// </summary>
+        private OptionsProvider _optionsProvider;
+
+        #region Init - Check - Dispose
 
         /// <summary>
         /// Creates new service container
@@ -28,6 +33,17 @@ namespace Twino.Ioc
         public ServiceContainer()
         {
             _items = new Dictionary<Type, ServiceDescriptor>();
+            _optionsProvider = new OptionsProvider(this);
+        }
+
+        /// <summary>
+        /// Checks all registered services.
+        /// Throws exception if there are missing registrations or circular references
+        /// </summary>
+        public void CheckServices()
+        {
+            ServiceChecker checker = new ServiceChecker(_items.Values, _optionsProvider);
+            checker.Check();
         }
 
         /// <summary>
@@ -735,6 +751,13 @@ namespace Twino.Ioc
             else
                 descriptor = _items.Values.FirstOrDefault(x => x.ImplementationType == serviceType);
 
+            if (descriptor == null && _optionsProvider.IsOptionsType(serviceType))
+            {
+                object options = _optionsProvider.FindOptions(serviceType);
+                if (options != null)
+                    _items.TryGetValue(serviceType, out descriptor);
+            }
+
             return descriptor;
         }
 
@@ -951,8 +974,8 @@ namespace Twino.Ioc
             {
                 if (descriptor.MicrosoftServiceDescriptor != null)
                     yield return descriptor.MicrosoftServiceDescriptor;
-
-                yield return MapToExtensionDescriptor(descriptor);
+                else
+                    yield return MapToExtensionDescriptor(descriptor);
             }
         }
 
@@ -1090,15 +1113,5 @@ namespace Twino.Ioc
         }
 
         #endregion
-
-        /// <summary>
-        /// Checks all registered services.
-        /// Throws exception if there are missing registrations or circular references
-        /// </summary>
-        public void CheckServices()
-        {
-            ServiceChecker checker = new ServiceChecker(_items.Values);
-            checker.Check();
-        }
     }
 }
