@@ -7,6 +7,9 @@ using Twino.Ioc.Exceptions;
 
 namespace Twino.Ioc
 {
+    /// <summary>
+    /// Helper methods for Twino Ioc
+    /// </summary>
     internal static class Helpers
     {
         /// <summary>
@@ -76,6 +79,9 @@ namespace Twino.Ioc
             return dict.OrderBy(x => x.Key).Select(x => x.Value).ToArray();
         }
 
+        /// <summary>
+        /// Finds a possible constructor that can be injected
+        /// </summary>
         private static ConstructorInfo FindPossibleConstructor(ConstructorInfo[] ctors)
         {
             foreach (ConstructorInfo ctor in ctors)

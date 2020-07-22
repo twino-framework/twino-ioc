@@ -40,9 +40,9 @@ namespace Twino.Ioc.Pool
         public ServicePoolOptions Options { get; internal set; }
 
         /// <summary>
-        /// Services container of pool
+        /// Service Instance Provider
         /// </summary>
-        public IServiceContainer Container { get; }
+        public IServiceInstanceProvider InstanceProvider { get; }
 
         /// <summary>
         /// Idle handler for the pool
@@ -62,13 +62,13 @@ namespace Twino.Ioc.Pool
         /// Crates new service pool belong the container with options and after instance creation functions
         /// </summary>
         /// <param name="type">Implementation type</param>
-        /// <param name="container">Parent container</param>
+        /// <param name="instanceProvider">Instance provider for creating service instances</param>
         /// <param name="ofunc">Options function</param>
         /// <param name="func">After each instance is created, to do custom initialization, this method will be called.</param>
-        public ServicePool(ImplementationType type, IServiceContainer container, Action<ServicePoolOptions> ofunc, Action<TService> func)
+        public ServicePool(ImplementationType type, IServiceInstanceProvider instanceProvider, Action<ServicePoolOptions> ofunc, Action<TService> func)
         {
             Type = type;
-            Container = container;
+            InstanceProvider = instanceProvider;
             _func = func;
 
             Options = new ServicePoolOptions();
@@ -87,7 +87,7 @@ namespace Twino.Ioc.Pool
             }
 
             ImplementationTypeConstructors = Helpers.FindUsableConstructors(typeof(TImplementation));
-            
+
             if (ImplementationTypeConstructors == null)
                 throw new IocConstructorException($"{typeof(TImplementation).ToTypeString()} does not have a public constructor");
         }
@@ -246,13 +246,13 @@ namespace Twino.Ioc.Pool
             if (Type == ImplementationType.Scoped && scope != null)
             {
                 //we couldn't find any created instance. create new.
-                object instance = await Container.CreateInstance(typeof(TImplementation), ImplementationTypeConstructors, scope);
+                object instance = await InstanceProvider.CreateInstance(typeof(TImplementation), ImplementationTypeConstructors, scope);
                 scope.PutItem(typeof(TService), instance);
                 descriptor.Instance = (TService) instance;
             }
             else
             {
-                object instance = await Container.CreateInstance(typeof(TImplementation), ImplementationTypeConstructors, scope);
+                object instance = await InstanceProvider.CreateInstance(typeof(TImplementation), ImplementationTypeConstructors, scope);
                 descriptor.Instance = (TService) instance;
             }
 
@@ -282,11 +282,11 @@ namespace Twino.Ioc.Pool
         /// Crates new service pool belong the container with options and after instance creation functions
         /// </summary>
         /// <param name="type">Implementation type</param>
-        /// <param name="container">Parent container</param>
+        /// <param name="instanceProvider">Instance provider for creating service instances</param>
         /// <param name="ofunc">Options function</param>
         /// <param name="func">After each instance is created, to do custom initialization, this method will be called.</param>
-        public ServicePool(ImplementationType type, IServiceContainer container, Action<ServicePoolOptions> ofunc, Action<TService> func)
-            : base(type, container, ofunc, func)
+        public ServicePool(ImplementationType type, IServiceInstanceProvider instanceProvider, Action<ServicePoolOptions> ofunc, Action<TService> func)
+            : base(type, instanceProvider, ofunc, func)
         {
         }
 
@@ -308,16 +308,16 @@ namespace Twino.Ioc.Pool
             if (Type == ImplementationType.Scoped && scope != null)
             {
                 //we couldn't find any created instance. create new.
-                object instance = await Container.CreateInstance(typeof(TImplementation), ImplementationTypeConstructors, scope);
-                IServiceProxy p = (IServiceProxy) await Container.CreateInstance(typeof(TProxy), null, scope);
+                object instance = await InstanceProvider.CreateInstance(typeof(TImplementation), ImplementationTypeConstructors, scope);
+                IServiceProxy p = (IServiceProxy) await InstanceProvider.CreateInstance(typeof(TProxy), null, scope);
                 object proxyObj = p.Proxy(instance);
                 scope.PutItem(typeof(TService), proxyObj);
                 descriptor.Instance = (TService) proxyObj;
             }
             else
             {
-                object instance = await Container.CreateInstance(typeof(TImplementation), ImplementationTypeConstructors, scope);
-                IServiceProxy p = (IServiceProxy) await Container.CreateInstance(typeof(TProxy), null, scope);
+                object instance = await InstanceProvider.CreateInstance(typeof(TImplementation), ImplementationTypeConstructors, scope);
+                IServiceProxy p = (IServiceProxy) await InstanceProvider.CreateInstance(typeof(TProxy), null, scope);
                 object proxyObj = p.Proxy(instance);
                 descriptor.Instance = (TService) proxyObj;
             }

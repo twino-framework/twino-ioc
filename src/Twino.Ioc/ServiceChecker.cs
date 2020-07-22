@@ -6,39 +6,39 @@ using Twino.Ioc.Exceptions;
 
 namespace Twino.Ioc
 {
-    internal class ReferenceTree
-    {
-        public ReferenceTree Parent { get; set; }
-
-        public Type Type { get; set; }
-
-        public List<ReferenceTree> Leaves { get; set; }
-
-        public ReferenceTree(ReferenceTree parent, Type type) : this(parent, type, new List<ReferenceTree>())
-        {
-        }
-
-        public ReferenceTree(ReferenceTree parent, Type type, List<ReferenceTree> leaves)
-        {
-            Parent = parent;
-            Type = type;
-            Leaves = leaves;
-        }
-    }
-
+    /// <summary>
+    /// Used for checking container registrations
+    /// </summary>
     internal class ServiceChecker
     {
+        /// <summary>
+        /// Options provider is used for Microsoft Extensions integrations
+        /// </summary>
         private readonly OptionsProvider _optionsProvider;
+
+        /// <summary>
+        /// All service registrations
+        /// </summary>
         private readonly IEnumerable<ServiceDescriptor> _descriptors;
 
+        /// <summary>
+        /// Root references
+        /// </summary>
         private readonly List<ReferenceTree> _tree = new List<ReferenceTree>();
 
+        /// <summary>
+        /// Creates new service checker
+        /// </summary>
         public ServiceChecker(IEnumerable<ServiceDescriptor> descriptors, OptionsProvider optionsProvider)
         {
             _descriptors = descriptors;
             _optionsProvider = optionsProvider;
         }
 
+        /// <summary>
+        /// Checks registrations.
+        /// Throws exception if there are missing references of circularity
+        /// </summary>
         public void Check()
         {
             foreach (ServiceDescriptor descriptor in _descriptors)
@@ -55,14 +55,17 @@ namespace Twino.Ioc
                 CheckCircularity(tree);
         }
 
+        /// <summary>
+        /// Creates new reference free for the service descriptor
+        /// </summary>
         private ReferenceTree CreateTree(ServiceDescriptor descriptor, ReferenceTree parentTree)
         {
             //if there is an instance already created or an implementation factory, we don't care how it will be created
             if (descriptor.ImplementationFactory != null || descriptor.Instance != null)
                 return new ReferenceTree(parentTree, descriptor.ServiceType);
-            
+
             if (descriptor.Constructors == null || descriptor.Constructors.Length == 0)
-                    throw new IocConstructorException($"{descriptor.ImplementationType.ToTypeString()} has no constructors");
+                throw new IocConstructorException($"{descriptor.ImplementationType.ToTypeString()} has no constructors");
 
             ReferenceTree tree = new ReferenceTree(parentTree, descriptor.ServiceType);
 
@@ -84,6 +87,9 @@ namespace Twino.Ioc
             return tree;
         }
 
+        /// <summary>
+        /// Checks circularity
+        /// </summary>
         private void CheckCircularity(ReferenceTree item)
         {
             //check self reference
@@ -98,6 +104,10 @@ namespace Twino.Ioc
             }
         }
 
+        /// <summary>
+        /// Check circularity for parent objects.
+        /// This is recursive method and calls itself till root reference
+        /// </summary>
         private void CheckParentCircularity(ReferenceTree current, Type type, ReferenceTree entrypoint)
         {
             if (current.Type == type)

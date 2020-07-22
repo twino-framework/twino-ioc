@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Twino.Ioc.Exceptions;
@@ -15,6 +14,8 @@ namespace Twino.Ioc
     /// </summary>
     public class ServiceContainer : IServiceContainer, IDisposable
     {
+        public IServiceInstanceProvider InstanceProvider { get; }
+
         /// <summary>
         /// Service descriptor items
         /// </summary>
@@ -30,10 +31,21 @@ namespace Twino.Ioc
         /// <summary>
         /// Creates new service container
         /// </summary>
+        public ServiceContainer(IServiceInstanceProviderFactory serviceInstanceProviderFactory)
+        {
+            _items = new Dictionary<Type, ServiceDescriptor>();
+            _optionsProvider = new OptionsProvider(this);
+            InstanceProvider = serviceInstanceProviderFactory.Create(this);
+        }
+
+        /// <summary>
+        /// Creates new service container
+        /// </summary>
         public ServiceContainer()
         {
             _items = new Dictionary<Type, ServiceDescriptor>();
             _optionsProvider = new OptionsProvider(this);
+            InstanceProvider = new ServiceInstanceProviderFactory().Create(this);
         }
 
         /// <summary>
@@ -554,7 +566,7 @@ namespace Twino.Ioc
             where TService : class
             where TImplementation : class, TService
         {
-            ServicePool<TService, TImplementation> pool = new ServicePool<TService, TImplementation>(type, this, options, instance);
+            ServicePool<TService, TImplementation> pool = new ServicePool<TService, TImplementation>(type, InstanceProvider, options, instance);
             ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Singleton, typeof(TService), typeof(ServicePool<TService, TImplementation>), pool)
                                            {
                                                IsPool = true
@@ -574,7 +586,7 @@ namespace Twino.Ioc
             where TImplementation : class, TService
             where TProxy : class, IServiceProxy
         {
-            ServicePool<TService, TImplementation, TProxy> pool = new ServicePool<TService, TImplementation, TProxy>(type, this, options, instance);
+            ServicePool<TService, TImplementation, TProxy> pool = new ServicePool<TService, TImplementation, TProxy>(type, InstanceProvider, options, instance);
             ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Singleton, typeof(TService), typeof(ServicePool<TService, TImplementation>), pool)
                                            {
                                                IsPool = true,
@@ -677,14 +689,14 @@ namespace Twino.Ioc
                     if (descriptor.ImplementationFactory != null)
                         transient = descriptor.ImplementationFactory(this);
                     else
-                        transient = await CreateInstance(descriptor.ImplementationType, descriptor.Constructors, scope);
+                        transient = await InstanceProvider.CreateInstance(descriptor.ImplementationType, descriptor.Constructors, scope);
 
                     if (descriptor.AfterCreatedMethod != null)
                         descriptor.AfterCreatedMethod.DynamicInvoke(transient);
 
                     if (descriptor.ProxyType != null)
                     {
-                        IServiceProxy p = (IServiceProxy) await CreateInstance(descriptor.ProxyType, null, scope);
+                        IServiceProxy p = (IServiceProxy) await InstanceProvider.CreateInstance(descriptor.ProxyType, null, scope);
                         return p.Proxy(transient);
                     }
 
@@ -707,14 +719,14 @@ namespace Twino.Ioc
                     if (descriptor.ImplementationFactory != null)
                         instance = descriptor.ImplementationFactory(this);
                     else
-                        instance = await CreateInstance(descriptor.ImplementationType, descriptor.Constructors, scope);
+                        instance = await InstanceProvider.CreateInstance(descriptor.ImplementationType, descriptor.Constructors, scope);
 
                     if (descriptor.AfterCreatedMethod != null)
                         descriptor.AfterCreatedMethod.DynamicInvoke(instance);
 
                     if (descriptor.ProxyType != null)
                     {
-                        IServiceProxy p = (IServiceProxy) await CreateInstance(descriptor.ProxyType, null, scope);
+                        IServiceProxy p = (IServiceProxy) await InstanceProvider.CreateInstance(descriptor.ProxyType, null, scope);
                         object proxyObject = p.Proxy(instance);
                         descriptor.Instance = proxyObject;
                     }
@@ -759,61 +771,6 @@ namespace Twino.Ioc
             }
 
             return descriptor;
-        }
-
-        /// <summary>
-        /// Creates instance of type.
-        /// If it has constructor parameters, finds these parameters from the container
-        /// </summary>
-        public async Task<object> CreateInstance(Type type, ConstructorInfo[] usableConstructors, IContainerScope scope = null)
-        {
-            if (usableConstructors == null)
-                usableConstructors = type.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
-
-            foreach (ConstructorInfo constructor in usableConstructors)
-            {
-                ParameterInfo[] parameters = constructor.GetParameters();
-
-                //if parameterless create directly and return
-                if (parameters.Length == 0)
-                    return Activator.CreateInstance(type);
-
-                object[] values = new object[parameters.Length];
-
-                bool failed = false;
-                //find all parameters from the container
-                for (int i = 0; i < parameters.Length; i++)
-                {
-                    ParameterInfo parameter = parameters[i];
-                    if (typeof(IContainerScope).IsAssignableFrom(parameter.ParameterType))
-                        values[i] = scope;
-                    else
-                    {
-                        try
-                        {
-                            object value = await Get(parameter.ParameterType, scope);
-
-                            values[i] = value;
-                        }
-                        catch (IocConstructorException)
-                        {
-                            //parameter is not registered in service container
-                            //skip to next ctor
-                            failed = true;
-                            break;
-                        }
-                    }
-                }
-
-                //skip to next ctor
-                if (failed)
-                    continue;
-
-                //create with parameters found from the container
-                return Activator.CreateInstance(type, values);
-            }
-
-            throw new IocConstructorException($"{type.ToTypeString()} has no valid constructor");
         }
 
         /// <summary>
