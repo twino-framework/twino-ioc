@@ -6,7 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Twino.Mvc" Version="3.1.2" />
+      <PackageReference Include="Twino.Mvc" Version="3.2.1" />
     </ItemGroup>
 
     <ItemGroup>

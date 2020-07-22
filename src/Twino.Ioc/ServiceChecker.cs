@@ -28,19 +28,24 @@ namespace Twino.Ioc
 
     internal class ServiceChecker
     {
+        private readonly OptionsProvider _optionsProvider;
         private readonly IEnumerable<ServiceDescriptor> _descriptors;
 
         private readonly List<ReferenceTree> _tree = new List<ReferenceTree>();
 
-        public ServiceChecker(IEnumerable<ServiceDescriptor> descriptors)
+        public ServiceChecker(IEnumerable<ServiceDescriptor> descriptors, OptionsProvider optionsProvider)
         {
             _descriptors = descriptors;
+            _optionsProvider = optionsProvider;
         }
 
         public void Check()
         {
             foreach (ServiceDescriptor descriptor in _descriptors)
             {
+                if (_optionsProvider.IsConfigurationType(descriptor.ServiceType))
+                    continue;
+
                 ReferenceTree tree = CreateTree(descriptor, null);
                 if (tree != null)
                     _tree.Add(tree);
@@ -52,9 +57,13 @@ namespace Twino.Ioc
 
         private ReferenceTree CreateTree(ServiceDescriptor descriptor, ReferenceTree parentTree)
         {
-            if (descriptor.Constructors == null || descriptor.Constructors.Length == 0)
-                throw new IocConstructorException($"{descriptor.ImplementationType.ToTypeString()} has no constructors");
+            //if there is an instance already created or an implementation factory, we don't care how it will be created
+            if (descriptor.ImplementationFactory != null || descriptor.Instance != null)
+                return new ReferenceTree(parentTree, descriptor.ServiceType);
             
+            if (descriptor.Constructors == null || descriptor.Constructors.Length == 0)
+                    throw new IocConstructorException($"{descriptor.ImplementationType.ToTypeString()} has no constructors");
+
             ReferenceTree tree = new ReferenceTree(parentTree, descriptor.ServiceType);
 
             foreach (ConstructorInfo constructor in descriptor.Constructors)
