@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.Ioc.Exceptions;
+using Twino.Ioc.Instance;
 
 namespace Twino.Ioc.Pool
 {

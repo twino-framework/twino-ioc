@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
+using Twino.Ioc.Instance;
 
 namespace Twino.Ioc
 {

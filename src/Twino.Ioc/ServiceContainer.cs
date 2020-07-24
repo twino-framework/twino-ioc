@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Twino.Ioc.Exceptions;
+using Twino.Ioc.Instance;
 using Twino.Ioc.Pool;
 
 namespace Twino.Ioc
@@ -14,6 +15,9 @@ namespace Twino.Ioc
     /// </summary>
     public class ServiceContainer : IServiceContainer, IDisposable
     {
+        /// <summary>
+        /// Instance Provider for container
+        /// </summary>
         public IServiceInstanceProvider InstanceProvider { get; }
 
         /// <summary>
@@ -24,7 +28,7 @@ namespace Twino.Ioc
         /// <summary>
         /// Options provider for Microsoft.Extensions.Options
         /// </summary>
-        private OptionsProvider _optionsProvider;
+        private readonly OptionsProvider _optionsProvider;
 
         #region Init - Check - Dispose
 
@@ -989,10 +993,6 @@ namespace Twino.Ioc
 
             return false;
         }
-
-        #endregion
-
-        #region Not Supported
 
         /// <summary>
         /// Method is added to IServiceContainer implementation of Microsoft Extensions.

@@ -3,12 +3,19 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Twino.Ioc.Exceptions;
 
-namespace Twino.Ioc
+namespace Twino.Ioc.Instance
 {
+    /// <summary>
+    /// Default service instance provider for creating new instance for registered service
+    /// </summary>
     public class ServiceInstanceProvider : IServiceInstanceProvider
     {
         private readonly ITwinoServiceProvider _provider;
 
+        /// <summary>
+        /// Creates new service instance provider
+        /// </summary>
+        /// <param name="provider"></param>
         public ServiceInstanceProvider(ITwinoServiceProvider provider)
         {
             _provider = provider;
