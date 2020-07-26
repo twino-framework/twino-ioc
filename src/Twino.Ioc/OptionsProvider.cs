@@ -8,14 +8,14 @@ namespace Twino.Ioc
     /// </summary>
     public class OptionsProvider
     {
-        private readonly IServiceContainer _container;
+        private readonly ITwinoServiceCollection _services;
 
         /// <summary>
         /// Creates new options provider for service container
         /// </summary>
-        public OptionsProvider(IServiceContainer container)
+        public OptionsProvider(ITwinoServiceCollection services)
         {
-            _container = container;
+            _services = services;
         }
 
         /// <summary>
@@ -35,7 +35,7 @@ namespace Twino.Ioc
         /// </summary>
         public bool IsConfigurationType(Type serviceType)
         {
-            if (serviceType.Namespace.Equals("Microsoft.Extensions.Options"))
+            if (serviceType.Namespace != null && serviceType.Namespace.Equals("Microsoft.Extensions.Options"))
                 return true;
             
             if (serviceType.IsGenericType)
@@ -58,10 +58,10 @@ namespace Twino.Ioc
         /// Finds and returns generic IOptions object.
         /// Generic parameter type is serviceType.GetGenericArguments[0]
         /// </summary>
-        public object FindOptions(Type serviceType)
+        public object FindOptions(ITwinoServiceProvider provider, Type serviceType)
         {
-            if (_container.Contains(serviceType))
-                return _container.Get(serviceType).GetAwaiter().GetResult();
+            if (provider.Contains(serviceType))
+                return provider.Get(serviceType);
 
             Type[] genericArgs = serviceType.GetGenericArguments();
             if (genericArgs.Length < 1)
@@ -71,7 +71,7 @@ namespace Twino.Ioc
             Type configureType = typeof(IConfigureOptions<>);
             configureType = configureType.MakeGenericType(optionsType);
 
-            dynamic configure = _container.Get(configureType).GetAwaiter().GetResult();
+            dynamic configure = provider.Get(configureType);
             if (configure == null)
                 return null;
 
@@ -79,7 +79,7 @@ namespace Twino.Ioc
             dynamic optionsServiceType = Options.Create(options);
             configure.Configure(options);
 
-            _container.AddSingleton(serviceType, optionsServiceType);
+            _services.AddSingleton(serviceType, optionsServiceType);
 
             return optionsServiceType;
         }

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using Twino.Ioc.Exceptions;
 
 namespace Twino.Ioc
@@ -19,7 +18,7 @@ namespace Twino.Ioc
         /// <summary>
         /// All service registrations
         /// </summary>
-        private readonly IEnumerable<ServiceDescriptor> _descriptors;
+        private readonly IEnumerable<BuiltServiceDescriptor> _descriptors;
 
         /// <summary>
         /// Root references
@@ -29,7 +28,7 @@ namespace Twino.Ioc
         /// <summary>
         /// Creates new service checker
         /// </summary>
-        public ServiceChecker(IEnumerable<ServiceDescriptor> descriptors, OptionsProvider optionsProvider)
+        public ServiceChecker(IEnumerable<BuiltServiceDescriptor> descriptors, OptionsProvider optionsProvider)
         {
             _descriptors = descriptors;
             _optionsProvider = optionsProvider;
@@ -41,7 +40,7 @@ namespace Twino.Ioc
         /// </summary>
         public void Check()
         {
-            foreach (ServiceDescriptor descriptor in _descriptors)
+            foreach (BuiltServiceDescriptor descriptor in _descriptors)
             {
                 if (_optionsProvider.IsConfigurationType(descriptor.ServiceType))
                     continue;
@@ -58,30 +57,22 @@ namespace Twino.Ioc
         /// <summary>
         /// Creates new reference free for the service descriptor
         /// </summary>
-        private ReferenceTree CreateTree(ServiceDescriptor descriptor, ReferenceTree parentTree)
+        private ReferenceTree CreateTree(BuiltServiceDescriptor descriptor, ReferenceTree parentTree)
         {
             //if there is an instance already created or an implementation factory, we don't care how it will be created
             if (descriptor.ImplementationFactory != null || descriptor.Instance != null)
                 return new ReferenceTree(parentTree, descriptor.ServiceType);
 
-            if (descriptor.Constructors == null || descriptor.Constructors.Length == 0)
-                throw new IocConstructorException($"{descriptor.ImplementationType.ToTypeString()} has no constructors");
-
             ReferenceTree tree = new ReferenceTree(parentTree, descriptor.ServiceType);
-
-            foreach (ConstructorInfo constructor in descriptor.Constructors)
+            foreach (Type parameterType in descriptor.Parameters)
             {
-                ParameterInfo[] parameters = constructor.GetParameters();
-                foreach (ParameterInfo parameter in parameters)
-                {
-                    CheckParentCircularity(tree, parameter.ParameterType, tree);
+                CheckParentCircularity(tree, parameterType, tree);
 
-                    ServiceDescriptor childDescriptor = _descriptors.FirstOrDefault(x => x.ServiceType.IsAssignableFrom(parameter.ParameterType));
-                    if (childDescriptor == null)
-                        throw new MissingReferenceException($"{descriptor.ImplementationType.ToTypeString()} has an unregistered service type {parameter.ParameterType.ToTypeString()}");
+                BuiltServiceDescriptor childDescriptor = _descriptors.FirstOrDefault(x => x.ServiceType.IsAssignableFrom(parameterType));
+                if (childDescriptor == null)
+                    throw new MissingReferenceException($"{descriptor.ImplementationType.ToTypeString()} has an unregistered service type {parameterType.ToTypeString()}");
 
-                    tree.Leaves.Add(CreateTree(childDescriptor, tree));
-                }
+                tree.Leaves.Add(CreateTree(childDescriptor, tree));
             }
 
             return tree;

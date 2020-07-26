@@ -17,7 +17,7 @@ namespace Twino.Ioc.Pool
         /// Return type should be PoolServiceDescriptor with generic TService template 
         /// </summary>
         /// <returns></returns>
-        Task<PoolServiceDescriptor> GetAndLock(IContainerScope scope = null);
+        PoolServiceDescriptor GetAndLock(IContainerScope scope = null);
 
         /// <summary>
         /// Releases pool item by instance

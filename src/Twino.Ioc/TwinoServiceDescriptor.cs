@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Reflection;
-using Twino.Ioc.Exceptions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Twino.Ioc
 {
     /// <summary>
     /// Service definition description for the Dependency Inversion Container
     /// </summary>
-    public class ServiceDescriptor
+    public class TwinoServiceDescriptor
     {
         /// <summary>
         /// Service type.
@@ -21,6 +20,11 @@ namespace Twino.Ioc
         /// Usually end-user doesn't know this type.
         /// </summary>
         public Type ImplementationType { get; }
+
+        /// <summary>
+        /// Implementation method
+        /// </summary>
+        public ImplementationType Implementation { get; }
 
         /// <summary>
         /// If the descriptor type is Singleton, this object keeps the singleton object.
@@ -38,11 +42,6 @@ namespace Twino.Ioc
         public IServiceProxy ProxyInstance { get; set; }
 
         /// <summary>
-        /// Implementation method
-        /// </summary>
-        public ImplementationType Implementation { get; }
-
-        /// <summary>
         /// If not null, called for creating instance of the object
         /// </summary>
         public Func<IServiceProvider, object> ImplementationFactory { get; set; }
@@ -58,42 +57,19 @@ namespace Twino.Ioc
         public Delegate AfterCreatedMethod { get; set; }
 
         /// <summary>
-        /// Usable contructors of implementation type
-        /// </summary>
-        internal ConstructorInfo[] Constructors { get; }
-
-        /// <summary>
         /// Reference descriptor for Microsoft Extensions implementation
         /// </summary>
-        internal Microsoft.Extensions.DependencyInjection.ServiceDescriptor MicrosoftServiceDescriptor { get; set; }
+        internal ServiceDescriptor MicrosoftServiceDescriptor { get; set; }
 
         /// <summary>
         /// Creates new service descriptor object
         /// </summary>
-        public ServiceDescriptor(ImplementationType implementation, Type serviceType, Type implementationType, object instance = null)
-            : this(implementation, serviceType, implementationType, false, instance)
-        {
-        }
-
-        /// <summary>
-        /// Creates new service descriptor object
-        /// </summary>
-        internal ServiceDescriptor(ImplementationType implementation, Type serviceType, Type implementationType, bool findPossibleConstructor, object instance = null)
+        internal TwinoServiceDescriptor(ImplementationType implementation, Type serviceType, Type implementationType, object instance = null)
         {
             Implementation = implementation;
             ServiceType = serviceType;
             ImplementationType = implementationType;
             Instance = instance;
-
-            if (findPossibleConstructor)
-                Constructors = implementationType.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
-            else
-            {
-                Constructors = Helpers.FindUsableConstructors(implementationType);
-
-                if (Constructors == null && Instance == null)
-                    throw new IocConstructorException($"{implementationType.ToTypeString()} does not have a public constructor");
-            }
         }
     }
 }

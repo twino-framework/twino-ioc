@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Extensions.DependencyInjection;
 using Twino.Ioc.Pool;
 
 namespace Twino.Ioc
@@ -6,7 +7,7 @@ namespace Twino.Ioc
     /// <summary>
     /// Used for registering services for the service container 
     /// </summary>
-    public interface ITwinoServiceCollection
+    public interface ITwinoServiceCollection : IServiceCollection
     {
         #region Transient
 
@@ -336,11 +337,12 @@ namespace Twino.Ioc
         /// </summary>
         void Remove(Type type);
 
-        /// <summary>
-        /// Releases item from pool's locked item list
-        /// </summary>
-        void ReleasePoolItem<TService>(TService service);
-
         #endregion
+        
+        /// <summary>
+        /// Checks all registered services.
+        /// Throws exception if there are missing registrations or circular references
+        /// </summary>
+        public void CheckServices();
     }
 }

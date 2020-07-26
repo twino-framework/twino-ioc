@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using Twino.Ioc.Pool;
 
 namespace Twino.Ioc
@@ -19,19 +18,14 @@ namespace Twino.Ioc
         /// <summary>
         /// Gets the service from the container.
         /// </summary>
-        Task<TService> Get<TService>(IServiceContainer services)
+        TService Get<TService>()
             where TService : class;
 
         /// <summary>
         /// Gets the service from the container.
         /// </summary>
-        Task<object> Get(Type serviceType, IServiceContainer services);
-
-        /// <summary>
-        /// Gets the service from the container.
-        /// </summary>
-        Task<object> Get(ServiceDescriptor descriptor, IServiceContainer services);
-
+        object Get(Type serviceType);
+        
         /// <summary>
         /// When scope uses an instance of pool, operation should be informed with this method.
         /// While scope is disposing, it will tell to pool to release the instance

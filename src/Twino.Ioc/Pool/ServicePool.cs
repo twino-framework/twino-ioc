@@ -1,11 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Twino.Ioc.Exceptions;
-using Twino.Ioc.Instance;
 
 namespace Twino.Ioc.Pool
 {
@@ -14,7 +11,7 @@ namespace Twino.Ioc.Pool
     /// Contains same service instances in the pool.
     /// Provides available instances to requesters and guarantees that only requester uses same instances at same time
     /// </summary>
-    public class ServicePool<TService, TImplementation> : IServicePool, IDisposable
+    internal class ServicePool<TService, TImplementation> : IServicePoolInternal, IServicePool, IDisposable
         where TService : class
         where TImplementation : class, TService
     {
@@ -41,19 +38,12 @@ namespace Twino.Ioc.Pool
         public ServicePoolOptions Options { get; internal set; }
 
         /// <summary>
-        /// Service Instance Provider
-        /// </summary>
-        public IServiceInstanceProvider InstanceProvider { get; }
-
-        /// <summary>
         /// Idle handler for the pool
         /// </summary>
         private PoolIdleHandler<TService, TImplementation> _idleHandler;
 
-        /// <summary>
-        /// Usable constructors of implementation type
-        /// </summary>
-        protected ConstructorInfo[] ImplementationTypeConstructors { get; set; }
+        internal BuiltServiceDescriptor Descriptor { get; private set; }
+        protected ServiceContainer Container { get; private set; }
 
         #endregion
 
@@ -63,13 +53,14 @@ namespace Twino.Ioc.Pool
         /// Crates new service pool belong the container with options and after instance creation functions
         /// </summary>
         /// <param name="type">Implementation type</param>
-        /// <param name="instanceProvider">Instance provider for creating service instances</param>
+        /// <param name="container"></param>
         /// <param name="ofunc">Options function</param>
         /// <param name="func">After each instance is created, to do custom initialization, this method will be called.</param>
-        public ServicePool(ImplementationType type, IServiceInstanceProvider instanceProvider, Action<ServicePoolOptions> ofunc, Action<TService> func)
+        internal ServicePool(ImplementationType type, ServiceContainer container,
+                             Action<ServicePoolOptions> ofunc, Action<TService> func)
         {
             Type = type;
-            InstanceProvider = instanceProvider;
+            Container = container;
             _func = func;
 
             Options = new ServicePoolOptions();
@@ -86,11 +77,6 @@ namespace Twino.Ioc.Pool
                 _idleHandler = new PoolIdleHandler<TService, TImplementation>(this);
                 _idleHandler.Start();
             }
-
-            ImplementationTypeConstructors = Helpers.FindUsableConstructors(typeof(TImplementation));
-
-            if (ImplementationTypeConstructors == null)
-                throw new IocConstructorException($"{typeof(TImplementation).ToTypeString()} does not have a public constructor");
         }
 
         /// <summary>
@@ -131,7 +117,7 @@ namespace Twino.Ioc.Pool
         /// Get an item from pool and locks it to prevent multiple usage at same time.
         /// The item should be released with Release method.
         /// </summary>
-        public async Task<PoolServiceDescriptor> GetAndLock(IContainerScope scope = null)
+        public PoolServiceDescriptor GetAndLock(IContainerScope scope = null)
         {
             PoolServiceDescriptor<TService> descriptor = GetFromCreatedItem(scope);
 
@@ -144,7 +130,7 @@ namespace Twino.Ioc.Pool
                 count = Descriptors.Count;
 
             if (count < Options.PoolMaxSize)
-                return await CreateNew(scope, true);
+                return CreateNew(scope, true);
 
             //if there is no available instance and there is no space to create new
             TaskCompletionSource<PoolServiceDescriptor<TService>> completionSource = new TaskCompletionSource<PoolServiceDescriptor<TService>>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -160,7 +146,7 @@ namespace Twino.Ioc.Pool
                 }
             }, completionSource, false);
 
-            return await completionSource.Task;
+            return completionSource.Task.GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -175,7 +161,7 @@ namespace Twino.Ioc.Pool
                 DateTime waitMax = DateTime.UtcNow.Add(Options.WaitAvailableDuration);
                 while (DateTime.UtcNow < waitMax)
                 {
-                    await Task.Delay(5);
+                    await Task.Delay(1);
                     PoolServiceDescriptor<TService> pdesc = GetFromCreatedItem(scope);
 
                     if (pdesc != null)
@@ -187,7 +173,7 @@ namespace Twino.Ioc.Pool
             }
 
             //tried to get but timed out, if we can exceed limit, create new one and return
-            PoolServiceDescriptor<TService> result = Options.ExceedLimitWhenWaitTimeout ? (await CreateNew(scope, true)) : null;
+            PoolServiceDescriptor<TService> result = Options.ExceedLimitWhenWaitTimeout ? CreateNew(scope, true) : null;
             state.SetResult(result);
         }
 
@@ -233,7 +219,7 @@ namespace Twino.Ioc.Pool
         /// <summary>
         /// Creates new instance and adds to pool
         /// </summary>
-        protected virtual async Task<PoolServiceDescriptor<TService>> CreateNew(IContainerScope scope, bool locked)
+        protected virtual PoolServiceDescriptor<TService> CreateNew(IContainerScope scope, bool locked)
         {
             PoolServiceDescriptor<TService> descriptor = new PoolServiceDescriptor<TService>();
             descriptor.Locked = locked;
@@ -244,16 +230,15 @@ namespace Twino.Ioc.Pool
             else
                 descriptor.IdleTimeout = null;
 
+            object instance = Descriptor.CreateInstance((TwinoServiceProvider) Container.GetProvider(), scope);
             if (Type == ImplementationType.Scoped && scope != null)
             {
                 //we couldn't find any created instance. create new.
-                object instance = await InstanceProvider.CreateInstance(typeof(TImplementation), ImplementationTypeConstructors, scope);
                 scope.PutItem(typeof(TService), instance);
                 descriptor.Instance = (TService) instance;
             }
             else
             {
-                object instance = await InstanceProvider.CreateInstance(typeof(TImplementation), ImplementationTypeConstructors, scope);
                 descriptor.Instance = (TService) instance;
             }
 
@@ -267,6 +252,11 @@ namespace Twino.Ioc.Pool
         }
 
         #endregion
+
+        public void SetBuiltDescriptor(BuiltServiceDescriptor descriptor)
+        {
+            Descriptor = descriptor;
+        }
     }
 
     /// <summary>
@@ -274,7 +264,7 @@ namespace Twino.Ioc.Pool
     /// Contains same service instances in the pool.
     /// Provides available instances to requesters and guarantees that only requester uses same instances at same time
     /// </summary>
-    public class ServicePool<TService, TImplementation, TProxy> : ServicePool<TService, TImplementation>
+    internal class ServicePool<TService, TImplementation, TProxy> : ServicePool<TService, TImplementation>
         where TService : class
         where TImplementation : class, TService
         where TProxy : class, IServiceProxy
@@ -283,18 +273,19 @@ namespace Twino.Ioc.Pool
         /// Crates new service pool belong the container with options and after instance creation functions
         /// </summary>
         /// <param name="type">Implementation type</param>
-        /// <param name="instanceProvider">Instance provider for creating service instances</param>
         /// <param name="ofunc">Options function</param>
         /// <param name="func">After each instance is created, to do custom initialization, this method will be called.</param>
-        public ServicePool(ImplementationType type, IServiceInstanceProvider instanceProvider, Action<ServicePoolOptions> ofunc, Action<TService> func)
-            : base(type, instanceProvider, ofunc, func)
+        /// <param name="container"></param>
+        internal ServicePool(ImplementationType type, ServiceContainer container,
+                             Action<ServicePoolOptions> ofunc, Action<TService> func)
+            : base(type, container, ofunc, func)
         {
         }
 
         /// <summary>
         /// Creates new instance and adds to pool
         /// </summary>
-        protected override async Task<PoolServiceDescriptor<TService>> CreateNew(IContainerScope scope, bool locked)
+        protected override PoolServiceDescriptor<TService> CreateNew(IContainerScope scope, bool locked)
         {
             PoolServiceDescriptor<TService> descriptor = new PoolServiceDescriptor<TService>();
             descriptor.Locked = locked;
@@ -309,17 +300,17 @@ namespace Twino.Ioc.Pool
             if (Type == ImplementationType.Scoped && scope != null)
             {
                 //we couldn't find any created instance. create new.
-                object instance = await InstanceProvider.CreateInstance(typeof(TImplementation), ImplementationTypeConstructors, scope);
-                IServiceProxy p = (IServiceProxy) await InstanceProvider.CreateInstance(typeof(TProxy), null, scope);
-                object proxyObj = p.Proxy(instance);
+                object instance = Descriptor.CreateInstance((TwinoServiceProvider) Container.GetProvider(), scope);
+                IServiceProxy proxy = Container.GetProvider().Get<IServiceProxy>(scope);
+                object proxyObj = proxy.Proxy(instance);
                 scope.PutItem(typeof(TService), proxyObj);
                 descriptor.Instance = (TService) proxyObj;
             }
             else
             {
-                object instance = await InstanceProvider.CreateInstance(typeof(TImplementation), ImplementationTypeConstructors, scope);
-                IServiceProxy p = (IServiceProxy) await InstanceProvider.CreateInstance(typeof(TProxy), null, scope);
-                object proxyObj = p.Proxy(instance);
+                object instance = Descriptor.CreateInstance((TwinoServiceProvider) Container.GetProvider());
+                IServiceProxy proxy = Container.GetProvider().Get<IServiceProxy>(scope);
+                object proxyObj = proxy.Proxy(instance);
                 descriptor.Instance = (TService) proxyObj;
             }
 
