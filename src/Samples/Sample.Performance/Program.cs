@@ -14,9 +14,7 @@ namespace Sample.Performance
             services.AddTransient<IServiceB, ServiceB>();
             services.AddTransient<IServiceC, ServiceC>();
             services.AddTransient<IServiceA, ServiceA>();
-            services.AddTransient<IParentService, ParentService>(p =>
-            {
-            });
+            services.AddTransient<IParentService, ParentService>();
 
             ITwinoServiceProvider provider = services.GetProvider();
             IContainerScope scope = provider.CreateScope();

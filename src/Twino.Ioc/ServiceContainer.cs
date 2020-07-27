@@ -31,7 +31,6 @@ namespace Twino.Ioc
         {
             if (_provider == null)
             {
-                //CheckServices();
                 TwinoServiceProvider provider = new TwinoServiceProvider();
                 provider.Build(_items);
                 _provider = provider;
@@ -48,19 +47,6 @@ namespace Twino.Ioc
         public ServiceContainer()
         {
             _items = new List<TwinoServiceDescriptor>();
-        }
-
-        /// <summary>
-        /// Checks all registered services.
-        /// Throws exception if there are missing registrations or circular references
-        /// </summary>
-        public void CheckServices()
-        {
-            TwinoServiceProvider provider = (TwinoServiceProvider) GetProvider();
-            List<BuiltServiceDescriptor> descriptors = provider.GetBuiltServices();
-
-            ServiceChecker checker = new ServiceChecker(descriptors);
-            checker.Check();
         }
 
         /// <summary>

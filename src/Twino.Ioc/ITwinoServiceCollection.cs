@@ -338,11 +338,5 @@ namespace Twino.Ioc
         void Remove(Type type);
 
         #endregion
-        
-        /// <summary>
-        /// Checks all registered services.
-        /// Throws exception if there are missing registrations or circular references
-        /// </summary>
-        public void CheckServices();
     }
 }

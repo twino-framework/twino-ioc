@@ -27,15 +27,17 @@ namespace Sample.Performance
         }
     }
 
-
     public class ServiceB : IServiceB
     {
     }
 
     public class ServiceC : IServiceC
     {
+        public ServiceC()
+        {
+            
+        }
     }
-
 
     public class ParentService : IParentService
     {

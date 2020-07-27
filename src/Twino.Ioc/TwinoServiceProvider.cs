@@ -41,7 +41,7 @@ namespace Twino.Ioc
             }
 
             foreach (KeyValuePair<Type, BuiltServiceDescriptor> pair in _services)
-                FillParameterDescriptors(pair.Value);
+                FillParameterDescriptors(pair.Value, pair.Value);
         }
 
         private TwinoServiceDescriptor CreateOptionsItem(TwinoServiceDescriptor descriptor)
@@ -68,7 +68,7 @@ namespace Twino.Ioc
             return optionsDescriptor;
         }
 
-        private void BuildItem(TwinoServiceDescriptor descriptor, IEnumerable<TwinoServiceDescriptor> services)
+        private BuiltServiceDescriptor BuildItem(TwinoServiceDescriptor descriptor, IEnumerable<TwinoServiceDescriptor> services)
         {
             ConstructorHelper ctorHelper = new ConstructorHelper(services);
             BuiltServiceDescriptor builtDescriptor = new BuiltServiceDescriptor(descriptor.Implementation,
@@ -86,7 +86,7 @@ namespace Twino.Ioc
             {
                 ConstructorInfo constructorInfo = ctorHelper.FindAvailableConstructor(descriptor.ImplementationType);
                 if (constructorInfo == null)
-                    throw new IocConstructorException($"{descriptor.ImplementationType.ToTypeString()} does not have available constructor");
+                    throw new IocConstructorException($"{descriptor.ServiceType.ToTypeString()} does not have available constructor");
 
                 builtDescriptor.Build(constructorInfo);
             }
@@ -97,21 +97,29 @@ namespace Twino.Ioc
                 if (builtDescriptor.Instance is IServicePoolInternal pool)
                     pool.SetBuiltDescriptor(builtDescriptor);
             }
+
+            return builtDescriptor;
         }
 
-        private void FillParameterDescriptors(BuiltServiceDescriptor descriptor)
+        private void FillParameterDescriptors(BuiltServiceDescriptor descriptor, BuiltServiceDescriptor root)
         {
             if (descriptor.Parameters == null)
                 return;
 
+            if (root.Parameters != null && descriptor.Parameters != null)
+            {
+                if (descriptor.Parameters.Contains(root.ServiceType))
+                    throw new CircularReferenceException($"Circular reference between {root.ServiceType.ToTypeString()} and {descriptor.ServiceType.ToTypeString()}");
+            }
+
             foreach (Type type in descriptor.Parameters)
             {
                 if (!_services.ContainsKey(type))
-                    throw new MissingReferenceException($"{descriptor.ImplementationType.ToTypeString()} requires {type.ToTypeString()} but it's not registered");
+                    throw new MissingReferenceException($"{descriptor.ServiceType.ToTypeString()} requires {type.ToTypeString()} but it's not registered");
 
                 BuiltServiceDescriptor parameterDescriptor = _services[type];
                 descriptor.ParameterDescriptors.Add(parameterDescriptor);
-                FillParameterDescriptors(parameterDescriptor);
+                FillParameterDescriptors(parameterDescriptor, root);
             }
         }
 

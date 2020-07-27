@@ -39,8 +39,6 @@ namespace Test.Ioc
             services.AddScoped<IFirstChildService, FirstChildService>();
             services.AddScoped<ISecondChildService, SecondChildService>();
 
-            services.CheckServices();
-
             IContainerScope scope = services.CreateScope();
 
             IParentService parent = services.Get<IParentService>(scope);
