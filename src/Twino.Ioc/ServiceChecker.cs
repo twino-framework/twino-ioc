@@ -11,11 +11,6 @@ namespace Twino.Ioc
     internal class ServiceChecker
     {
         /// <summary>
-        /// Options provider is used for Microsoft Extensions integrations
-        /// </summary>
-        private readonly OptionsProvider _optionsProvider;
-
-        /// <summary>
         /// All service registrations
         /// </summary>
         private readonly IEnumerable<BuiltServiceDescriptor> _descriptors;
@@ -28,10 +23,9 @@ namespace Twino.Ioc
         /// <summary>
         /// Creates new service checker
         /// </summary>
-        public ServiceChecker(IEnumerable<BuiltServiceDescriptor> descriptors, OptionsProvider optionsProvider)
+        public ServiceChecker(IEnumerable<BuiltServiceDescriptor> descriptors)
         {
             _descriptors = descriptors;
-            _optionsProvider = optionsProvider;
         }
 
         /// <summary>
@@ -42,7 +36,7 @@ namespace Twino.Ioc
         {
             foreach (BuiltServiceDescriptor descriptor in _descriptors)
             {
-                if (_optionsProvider.IsConfigurationType(descriptor.ServiceType))
+                if (OptionsHelper.IsConfigurationType(descriptor.ServiceType))
                     continue;
 
                 ReferenceTree tree = CreateTree(descriptor, null);

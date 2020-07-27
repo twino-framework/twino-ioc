@@ -19,12 +19,6 @@ namespace Twino.Ioc
         private readonly List<TwinoServiceDescriptor> _items;
 
         /// <summary>
-        /// Options provider for Microsoft.Extensions.Options
-        /// </summary>
-        private readonly OptionsProvider _optionsProvider;
-
-
-        /// <summary>
         /// Currency service provider
         /// </summary>
         private TwinoServiceProvider _provider;
@@ -37,7 +31,8 @@ namespace Twino.Ioc
         {
             if (_provider == null)
             {
-                TwinoServiceProvider provider = new TwinoServiceProvider(this);
+                //CheckServices();
+                TwinoServiceProvider provider = new TwinoServiceProvider();
                 provider.Build(_items);
                 _provider = provider;
             }
@@ -53,7 +48,6 @@ namespace Twino.Ioc
         public ServiceContainer()
         {
             _items = new List<TwinoServiceDescriptor>();
-            _optionsProvider = new OptionsProvider(this);
         }
 
         /// <summary>
@@ -65,7 +59,7 @@ namespace Twino.Ioc
             TwinoServiceProvider provider = (TwinoServiceProvider) GetProvider();
             List<BuiltServiceDescriptor> descriptors = provider.GetBuiltServices();
 
-            ServiceChecker checker = new ServiceChecker(descriptors, _optionsProvider);
+            ServiceChecker checker = new ServiceChecker(descriptors);
             checker.Check();
         }
 
@@ -912,7 +906,7 @@ namespace Twino.Ioc
         /// </summary>
         public void ReleasePoolItem<TService>(TService service)
         {
-            GetProvider().ReleasePoolItem<TService>(service);
+            GetProvider().ReleasePoolItem(service);
         }
 
         /// <summary>

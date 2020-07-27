@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Microsoft.Extensions.Options;
 using Twino.Ioc.Exceptions;
 using Twino.Ioc.Pool;
 
@@ -9,13 +10,7 @@ namespace Twino.Ioc
 {
     internal class TwinoServiceProvider : ITwinoServiceProvider
     {
-        private readonly OptionsProvider _optionsProvider;
         private readonly Dictionary<Type, BuiltServiceDescriptor> _services = new Dictionary<Type, BuiltServiceDescriptor>();
-
-        public TwinoServiceProvider(ITwinoServiceCollection services)
-        {
-            _optionsProvider = new OptionsProvider(services);
-        }
 
         #region Build
 
@@ -26,16 +21,56 @@ namespace Twino.Ioc
 
         internal void Build(IEnumerable<TwinoServiceDescriptor> services)
         {
+            BuildItem(new TwinoServiceDescriptor(ImplementationType.Singleton, typeof(IServiceProvider), GetType(), this), services);
+            BuildItem(new TwinoServiceDescriptor(ImplementationType.Singleton, typeof(ITwinoServiceProvider), GetType(), this), services);
+            BuildItem(new TwinoServiceDescriptor(ImplementationType.Singleton, typeof(IServiceContainer), GetType(), this), services);
+
             foreach (TwinoServiceDescriptor descriptor in services)
-                BuildItem(descriptor, services);
+            {
+                //skip microsoft's options open generic registrations
+                if (descriptor.ImplementationType.IsGenericType && descriptor.ImplementationType.IsGenericTypeDefinition)
+                    continue;
+
+                if (OptionsHelper.IsConfigurationType(descriptor.ServiceType))
+                {
+                    TwinoServiceDescriptor optionsDescriptor = CreateOptionsItem(descriptor);
+                    BuildItem(optionsDescriptor, services);
+                }
+                else
+                    BuildItem(descriptor, services);
+            }
 
             foreach (KeyValuePair<Type, BuiltServiceDescriptor> pair in _services)
                 FillParameterDescriptors(pair.Value);
         }
 
+        private TwinoServiceDescriptor CreateOptionsItem(TwinoServiceDescriptor descriptor)
+        {
+            var configFunc = descriptor.ImplementationFactory;
+            Type optionsType = descriptor.ServiceType.GetGenericArguments()[0];
+
+            Type openGeneric = typeof(IOptions<>);
+            Type optionsServiceType = openGeneric.MakeGenericType(optionsType);
+
+            TwinoServiceDescriptor optionsDescriptor = new TwinoServiceDescriptor(descriptor.Implementation,
+                                                                                  optionsServiceType,
+                                                                                  optionsServiceType);
+
+            optionsDescriptor.ImplementationFactory = prov =>
+            {
+                dynamic configure = configFunc(this);
+                dynamic options = Activator.CreateInstance(optionsType);
+                object optionsInstance = Options.Create(options);
+                configure.Configure(options);
+                return optionsInstance;
+            };
+
+            return optionsDescriptor;
+        }
+
         private void BuildItem(TwinoServiceDescriptor descriptor, IEnumerable<TwinoServiceDescriptor> services)
         {
-            ConstructorHelper ctorHelper = new ConstructorHelper(services, _optionsProvider);
+            ConstructorHelper ctorHelper = new ConstructorHelper(services);
             BuiltServiceDescriptor builtDescriptor = new BuiltServiceDescriptor(descriptor.Implementation,
                                                                                 descriptor.ServiceType,
                                                                                 descriptor.ImplementationType);
@@ -104,7 +139,7 @@ namespace Twino.Ioc
             //throw new NullReferenceException($"Could not get service from container: {typeof(TService).ToTypeString()}");
             //throw new KeyNotFoundException($"Service type is not found: {serviceType.ToTypeString()}");
 
-            BuiltServiceDescriptor descriptor = GetDescriptor(serviceType);
+            BuiltServiceDescriptor descriptor = _services[serviceType];
             if (descriptor.IsPool)
                 return GetFromPool(descriptor, scope);
 
@@ -167,7 +202,7 @@ namespace Twino.Ioc
 
             if (pool.Type == ImplementationType.Scoped && scope == null)
                 throw new ScopeException($"{descriptor.ServiceType.ToTypeString()} is registered as Scoped but scope parameter is null for IServiceContainer.Get method");
-            
+
             if (scope != null)
                 scope.UsePoolItem(pool, pdesc);
 
@@ -230,7 +265,7 @@ namespace Twino.Ioc
         /// </summary>
         public void ReleasePoolItem<TService>(TService service)
         {
-            BuiltServiceDescriptor descriptor = GetDescriptor(typeof(TService));
+            BuiltServiceDescriptor descriptor = _services[typeof(TService)];
             IServicePool pool = (IServicePool) descriptor.Instance;
             pool.ReleaseInstance(service);
         }
@@ -241,31 +276,6 @@ namespace Twino.Ioc
         public IContainerScope CreateScope()
         {
             return new DefaultContainerScope(this);
-        }
-
-        /// <summary>
-        /// Gets descriptor of type
-        /// </summary>
-        private BuiltServiceDescriptor GetDescriptor(Type serviceType)
-        {
-            BuiltServiceDescriptor descriptor;
-            bool found = _services.TryGetValue(serviceType, out descriptor);
-            if (found)
-                return descriptor;
-
-            //if could not find by service type, tries to find by implementation type
-            descriptor = _services.Values.FirstOrDefault(x => x.ImplementationType == serviceType);
-            if (descriptor != null)
-                return descriptor;
-
-            if (_optionsProvider.IsOptionsType(serviceType))
-            {
-                object options = _optionsProvider.FindOptions(this, serviceType);
-                if (options != null)
-                    _services.TryGetValue(serviceType, out descriptor);
-            }
-
-            return descriptor;
         }
     }
 }

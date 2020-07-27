@@ -9,12 +9,10 @@ namespace Twino.Ioc
     internal class ConstructorHelper
     {
         private readonly IEnumerable<TwinoServiceDescriptor> _services;
-        private readonly OptionsProvider _optionsProvider;
 
-        public ConstructorHelper(IEnumerable<TwinoServiceDescriptor> services, OptionsProvider optionsProvider)
+        public ConstructorHelper(IEnumerable<TwinoServiceDescriptor> services)
         {
             _services = services;
-            _optionsProvider = optionsProvider;
         }
 
         /// <summary>
@@ -52,7 +50,7 @@ namespace Twino.Ioc
                 foreach (ParameterInfo parameter in parameters)
                 {
                     bool paramFound = _services.Any(x => x.ServiceType == parameter.ParameterType || x.ImplementationType == parameter.ParameterType);
-                    if (!paramFound && !_optionsProvider.IsOptionsType(parameter.ParameterType) && !_optionsProvider.IsConfigurationType(parameter.ParameterType))
+                    if (!paramFound && !OptionsHelper.IsOptionsType(parameter.ParameterType) && !OptionsHelper.IsConfigurationType(parameter.ParameterType))
                     {
                         skip = true;
                         break;
