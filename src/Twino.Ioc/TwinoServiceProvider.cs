@@ -57,7 +57,6 @@ namespace Twino.Ioc
             }
 
             _services.Add(descriptor.ServiceType, builtDescriptor);
-
             if (builtDescriptor.IsPool)
             {
                 if (builtDescriptor.Instance is IServicePoolInternal pool)
@@ -118,8 +117,6 @@ namespace Twino.Ioc
             object service;
             if (!executedFromScope && scope != null && descriptor.Implementation == ImplementationType.Scoped)
                 service = scope.Get(serviceType);
-            else if (descriptor.ImplementationFactory != null)
-                service = descriptor.ImplementationFactory(this);
             else
                 service = descriptor.CreateInstance(this, scope);
 
@@ -170,7 +167,7 @@ namespace Twino.Ioc
 
             if (pool.Type == ImplementationType.Scoped && scope == null)
                 throw new ScopeException($"{descriptor.ServiceType.ToTypeString()} is registered as Scoped but scope parameter is null for IServiceContainer.Get method");
-
+            
             if (scope != null)
                 scope.UsePoolItem(pool, pdesc);
 
@@ -253,12 +250,15 @@ namespace Twino.Ioc
         {
             BuiltServiceDescriptor descriptor;
             bool found = _services.TryGetValue(serviceType, out descriptor);
+            if (found)
+                return descriptor;
 
             //if could not find by service type, tries to find by implementation type
-            if (!found)
-                descriptor = _services.Values.FirstOrDefault(x => x.ImplementationType == serviceType);
+            descriptor = _services.Values.FirstOrDefault(x => x.ImplementationType == serviceType);
+            if (descriptor != null)
+                return descriptor;
 
-            if (descriptor == null && _optionsProvider.IsOptionsType(serviceType))
+            if (_optionsProvider.IsOptionsType(serviceType))
             {
                 object options = _optionsProvider.FindOptions(this, serviceType);
                 if (options != null)

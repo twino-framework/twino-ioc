@@ -14,12 +14,14 @@ namespace Sample.Performance
             services.AddTransient<IServiceB, ServiceB>();
             services.AddTransient<IServiceC, ServiceC>();
             services.AddTransient<IServiceA, ServiceA>();
-            services.AddSingleton<IParentService, ParentService>();
+            services.AddTransient<IParentService, ParentService>(p =>
+            {
+            });
 
-            IParentService service = services.Get<IParentService>();
-            
-            ITwinoServiceProvider provider= services.GetProvider();
-            
+            ITwinoServiceProvider provider = services.GetProvider();
+            IContainerScope scope = provider.CreateScope();
+            IParentService service = services.Get<IParentService>(scope);
+
             Console.WriteLine(service);
             Console.ReadLine();
             object s;
@@ -30,7 +32,7 @@ namespace Sample.Performance
                 swx.Start();
                 for (int i = 0; i < 10000000; i++)
                 {
-                    s = provider.Get<IParentService>();
+                    s = provider.Get<IParentService>(); //scope);
                 }
 
                 swx.Stop();
