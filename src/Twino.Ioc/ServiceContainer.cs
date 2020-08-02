@@ -2,8 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Twino.Ioc.Exceptions;
 using Twino.Ioc.Pool;
@@ -18,12 +16,28 @@ namespace Twino.Ioc
         /// <summary>
         /// Service descriptor items
         /// </summary>
-        private readonly Dictionary<Type, ServiceDescriptor> _items;
+        private readonly List<TwinoServiceDescriptor> _items;
 
         /// <summary>
-        /// Options provider for Microsoft.Extensions.Options
+        /// Currency service provider
         /// </summary>
-        private OptionsProvider _optionsProvider;
+        private TwinoServiceProvider _provider;
+
+        /// <summary>
+        /// Returns current service provider
+        /// </summary>
+        /// <returns></returns>
+        public ITwinoServiceProvider GetProvider()
+        {
+            if (_provider == null)
+            {
+                TwinoServiceProvider provider = new TwinoServiceProvider();
+                provider.Build(_items);
+                _provider = provider;
+            }
+
+            return _provider;
+        }
 
         #region Init - Check - Dispose
 
@@ -32,18 +46,7 @@ namespace Twino.Ioc
         /// </summary>
         public ServiceContainer()
         {
-            _items = new Dictionary<Type, ServiceDescriptor>();
-            _optionsProvider = new OptionsProvider(this);
-        }
-
-        /// <summary>
-        /// Checks all registered services.
-        /// Throws exception if there are missing registrations or circular references
-        /// </summary>
-        public void CheckServices()
-        {
-            ServiceChecker checker = new ServiceChecker(_items.Values, _optionsProvider);
-            checker.Check();
+            _items = new List<TwinoServiceDescriptor>();
         }
 
         /// <summary>
@@ -121,17 +124,18 @@ namespace Twino.Ioc
         /// </summary>
         public void AddTransient(Type serviceType, Type implementationType, Type proxyType, Delegate afterCreated)
         {
-            if (_items.ContainsKey(serviceType))
+            if (_items.Any(x => x.ServiceType == serviceType))
                 throw new DuplicateTypeException($"{serviceType.ToTypeString()} service type is already added into service container");
 
-            ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Transient, serviceType, implementationType)
-                                           {
-                                               ProxyType = proxyType,
-                                               ProxyInstance = null,
-                                               AfterCreatedMethod = afterCreated
-                                           };
+            TwinoServiceDescriptor descriptor = new TwinoServiceDescriptor(ImplementationType.Transient, serviceType, implementationType)
+                                                {
+                                                    ProxyType = proxyType,
+                                                    ProxyInstance = null,
+                                                    AfterCreatedMethod = afterCreated
+                                                };
 
-            _items.Add(serviceType, descriptor);
+            _items.Add(descriptor);
+            _provider = null;
         }
 
         #endregion
@@ -201,17 +205,18 @@ namespace Twino.Ioc
         /// </summary>
         public void AddScoped(Type serviceType, Type implementationType, Type proxyType, Delegate afterCreated)
         {
-            if (_items.ContainsKey(serviceType))
+            if (_items.Any(x => x.ServiceType == serviceType))
                 throw new DuplicateTypeException($"{serviceType.ToTypeString()} service type is already added into service container");
 
-            ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Scoped, serviceType, implementationType)
-                                           {
-                                               ProxyType = proxyType,
-                                               ProxyInstance = null,
-                                               AfterCreatedMethod = afterCreated
-                                           };
+            TwinoServiceDescriptor descriptor = new TwinoServiceDescriptor(ImplementationType.Scoped, serviceType, implementationType)
+                                                {
+                                                    ProxyType = proxyType,
+                                                    ProxyInstance = null,
+                                                    AfterCreatedMethod = afterCreated
+                                                };
 
-            _items.Add(serviceType, descriptor);
+            _items.Add(descriptor);
+            _provider = null;
         }
 
         #endregion
@@ -289,8 +294,9 @@ namespace Twino.Ioc
         /// </summary>
         public void AddSingleton(Type serviceType, Type implementationType)
         {
-            ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Singleton, serviceType, implementationType);
-            _items.Add(serviceType, descriptor);
+            TwinoServiceDescriptor descriptor = new TwinoServiceDescriptor(ImplementationType.Singleton, serviceType, implementationType);
+            _items.Add(descriptor);
+            _provider = null;
         }
 
         /// <summary>
@@ -299,13 +305,14 @@ namespace Twino.Ioc
         /// </summary>
         public void AddSingleton(Type serviceType, Type implementationType, Type proxyType)
         {
-            ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Singleton, serviceType, implementationType)
-                                           {
-                                               ProxyType = proxyType,
-                                               ProxyInstance = null
-                                           };
+            TwinoServiceDescriptor descriptor = new TwinoServiceDescriptor(ImplementationType.Singleton, serviceType, implementationType)
+                                                {
+                                                    ProxyType = proxyType,
+                                                    ProxyInstance = null
+                                                };
 
-            _items.Add(serviceType, descriptor);
+            _items.Add(descriptor);
+            _provider = null;
         }
 
         /// <summary>
@@ -314,12 +321,13 @@ namespace Twino.Ioc
         /// </summary>
         public void AddSingleton(Type serviceType, Type implementationType, Delegate afterCreated)
         {
-            ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Singleton, serviceType, implementationType)
-                                           {
-                                               AfterCreatedMethod = afterCreated
-                                           };
+            TwinoServiceDescriptor descriptor = new TwinoServiceDescriptor(ImplementationType.Singleton, serviceType, implementationType)
+                                                {
+                                                    AfterCreatedMethod = afterCreated
+                                                };
 
-            _items.Add(serviceType, descriptor);
+            _items.Add(descriptor);
+            _provider = null;
         }
 
         /// <summary>
@@ -328,14 +336,15 @@ namespace Twino.Ioc
         /// </summary>
         public void AddSingleton(Type serviceType, Type implementationType, Type proxyType, Delegate afterCreated)
         {
-            ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Singleton, serviceType, implementationType)
-                                           {
-                                               ProxyType = proxyType,
-                                               ProxyInstance = null,
-                                               AfterCreatedMethod = afterCreated
-                                           };
+            TwinoServiceDescriptor descriptor = new TwinoServiceDescriptor(ImplementationType.Singleton, serviceType, implementationType)
+                                                {
+                                                    ProxyType = proxyType,
+                                                    ProxyInstance = null,
+                                                    AfterCreatedMethod = afterCreated
+                                                };
 
-            _items.Add(serviceType, descriptor);
+            _items.Add(descriptor);
+            _provider = null;
         }
 
         /// <summary>
@@ -344,8 +353,9 @@ namespace Twino.Ioc
         public void AddSingleton(Type serviceType, object instance)
         {
             Type implementationType = instance.GetType();
-            ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Singleton, serviceType, implementationType, instance);
-            _items.Add(serviceType, descriptor);
+            TwinoServiceDescriptor descriptor = new TwinoServiceDescriptor(ImplementationType.Singleton, serviceType, implementationType, instance);
+            _items.Add(descriptor);
+            _provider = null;
         }
 
         #endregion
@@ -555,12 +565,17 @@ namespace Twino.Ioc
             where TImplementation : class, TService
         {
             ServicePool<TService, TImplementation> pool = new ServicePool<TService, TImplementation>(type, this, options, instance);
-            ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Singleton, typeof(TService), typeof(ServicePool<TService, TImplementation>), pool)
-                                           {
-                                               IsPool = true
-                                           };
+            TwinoServiceDescriptor descriptor = new TwinoServiceDescriptor(ImplementationType.Singleton,
+                                                                           typeof(TService), 
+                                                                           typeof(TImplementation),
+                                                                           //typeof(ServicePool<TService, TImplementation>), 
+                                                                           pool)
+                                                {
+                                                    IsPool = true
+                                                };
 
-            _items.Add(typeof(TService), descriptor);
+            _items.Add(descriptor);
+            _provider = null;
         }
 
         /// <summary>
@@ -575,273 +590,18 @@ namespace Twino.Ioc
             where TProxy : class, IServiceProxy
         {
             ServicePool<TService, TImplementation, TProxy> pool = new ServicePool<TService, TImplementation, TProxy>(type, this, options, instance);
-            ServiceDescriptor descriptor = new ServiceDescriptor(ImplementationType.Singleton, typeof(TService), typeof(ServicePool<TService, TImplementation>), pool)
-                                           {
-                                               IsPool = true,
-                                               ProxyType = typeof(TProxy)
-                                           };
+            TwinoServiceDescriptor descriptor = new TwinoServiceDescriptor(ImplementationType.Singleton, 
+                                                                           typeof(TService), 
+                                                                           typeof(TImplementation),
+                                                                           //typeof(ServicePool<TService, TImplementation>), 
+                                                                           pool)
+                                                {
+                                                    IsPool = true,
+                                                    ProxyType = typeof(TProxy)
+                                                };
 
-            _items.Add(typeof(TService), descriptor);
-        }
-
-        #endregion
-
-        #region Get
-
-        /// <summary>
-        /// Gets the service from the container.
-        /// </summary>
-        public async Task<TService> Get<TService>(IContainerScope scope = null)
-            where TService : class
-        {
-            object o = await Get(typeof(TService), scope);
-            if (o == null)
-                throw new NullReferenceException($"Could not get service from container: {typeof(TService).ToTypeString()}");
-
-            return (TService) o;
-        }
-
-        /// <summary>
-        /// Gets the service from the container.
-        /// </summary>
-        public async Task<object> Get(Type serviceType, IContainerScope scope = null)
-        {
-            if (serviceType == typeof(IServiceContainer)) return this;
-
-            ServiceDescriptor descriptor = GetDescriptor(serviceType);
-            if (descriptor == null)
-                throw new KeyNotFoundException($"Service type is not found: {serviceType.ToTypeString()}");
-
-            if (descriptor.Implementation == ImplementationType.Scoped && scope == null)
-                throw new ScopeException($"{serviceType.ToTypeString()} is registered as scoped service but trying to create instance when scope is null");
-
-            return await Get(descriptor, scope);
-        }
-
-        /// <summary>
-        /// Try gets the service from the container.
-        /// </summary>
-        public Task<bool> TryGet<TService>(out TService service, IContainerScope scope = null) where TService : class
-        {
-            bool result = TryGet(typeof(TService), out object o, scope).Result;
-            service = (TService) o;
-            return Task.FromResult(result);
-        }
-
-        /// <summary>
-        /// Try gets the service from the container.
-        /// </summary>
-        public Task<bool> TryGet(Type serviceType, out object service, IContainerScope scope = null)
-        {
-            if (serviceType == typeof(IServiceContainer))
-            {
-                service = this;
-                return Task.FromResult(true);
-            }
-
-            ServiceDescriptor descriptor = GetDescriptor(serviceType);
-            if (descriptor == null)
-            {
-                service = null;
-                return Task.FromResult(false);
-            }
-
-            service = Get(descriptor, scope).Result;
-            return Task.FromResult(true);
-        }
-
-        private async Task<object> Get(ServiceDescriptor descriptor, IContainerScope scope = null)
-        {
-            if (descriptor.IsPool)
-            {
-                IServicePool pool = (IServicePool) descriptor.Instance;
-                PoolServiceDescriptor pdesc = await pool.GetAndLock(scope);
-
-                if (pdesc == null)
-                    throw new NullReferenceException($"{descriptor.ServiceType.ToTypeString()} Service is not registered in the container");
-
-                if (pool.Type == ImplementationType.Scoped && scope == null)
-                    throw new ScopeException($"{descriptor.ServiceType.ToTypeString()} is registered as Scoped but scope parameter is null for IServiceContainer.Get method");
-
-                if (scope != null)
-                    scope.UsePoolItem(pool, pdesc);
-
-                return pdesc.GetInstance();
-            }
-
-            switch (descriptor.Implementation)
-            {
-                //create new instance
-                case ImplementationType.Transient:
-                    object transient;
-                    if (descriptor.ImplementationFactory != null)
-                        transient = descriptor.ImplementationFactory(this);
-                    else
-                        transient = await CreateInstance(descriptor.ImplementationType, descriptor.Constructors, scope);
-
-                    if (descriptor.AfterCreatedMethod != null)
-                        descriptor.AfterCreatedMethod.DynamicInvoke(transient);
-
-                    if (descriptor.ProxyType != null)
-                    {
-                        IServiceProxy p = (IServiceProxy) await CreateInstance(descriptor.ProxyType, null, scope);
-                        return p.Proxy(transient);
-                    }
-
-                    return transient;
-
-                case ImplementationType.Scoped:
-
-                    if (scope == null)
-                        throw new ScopeException($"{descriptor.ServiceType.ToTypeString()} is registered as Scoped but scope parameter is null for IServiceContainer.Get method");
-
-                    return await scope.Get(descriptor, this);
-
-                case ImplementationType.Singleton:
-                    //if instance already created return
-                    if (descriptor.Instance != null)
-                        return descriptor.Instance;
-
-                    //create instance for first time and set Instance property of descriptor to prevent re-create for next times
-                    object instance;
-                    if (descriptor.ImplementationFactory != null)
-                        instance = descriptor.ImplementationFactory(this);
-                    else
-                        instance = await CreateInstance(descriptor.ImplementationType, descriptor.Constructors, scope);
-
-                    if (descriptor.AfterCreatedMethod != null)
-                        descriptor.AfterCreatedMethod.DynamicInvoke(instance);
-
-                    if (descriptor.ProxyType != null)
-                    {
-                        IServiceProxy p = (IServiceProxy) await CreateInstance(descriptor.ProxyType, null, scope);
-                        object proxyObject = p.Proxy(instance);
-                        descriptor.Instance = proxyObject;
-                    }
-                    else
-                        descriptor.Instance = instance;
-
-                    return descriptor.Instance;
-
-                default:
-                    return null;
-            }
-        }
-
-        /// <summary>
-        /// Gets descriptor of type
-        /// </summary>
-        public ServiceDescriptor GetDescriptor<TService>()
-        {
-            return GetDescriptor(typeof(TService));
-        }
-
-        /// <summary>
-        /// Gets descriptor of type
-        /// </summary>
-        public ServiceDescriptor GetDescriptor(Type serviceType)
-        {
-            ServiceDescriptor descriptor;
-
-            //finds by service type
-            if (_items.ContainsKey(serviceType))
-                descriptor = _items[serviceType];
-
-            //if could not find by service type, tries to find by implementation type
-            else
-                descriptor = _items.Values.FirstOrDefault(x => x.ImplementationType == serviceType);
-
-            if (descriptor == null && _optionsProvider.IsOptionsType(serviceType))
-            {
-                object options = _optionsProvider.FindOptions(serviceType);
-                if (options != null)
-                    _items.TryGetValue(serviceType, out descriptor);
-            }
-
-            return descriptor;
-        }
-
-        /// <summary>
-        /// Creates instance of type.
-        /// If it has constructor parameters, finds these parameters from the container
-        /// </summary>
-        public async Task<object> CreateInstance(Type type, ConstructorInfo[] usableConstructors, IContainerScope scope = null)
-        {
-            if (usableConstructors == null)
-                usableConstructors = type.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
-
-            foreach (ConstructorInfo constructor in usableConstructors)
-            {
-                ParameterInfo[] parameters = constructor.GetParameters();
-
-                //if parameterless create directly and return
-                if (parameters.Length == 0)
-                    return Activator.CreateInstance(type);
-
-                object[] values = new object[parameters.Length];
-
-                bool failed = false;
-                //find all parameters from the container
-                for (int i = 0; i < parameters.Length; i++)
-                {
-                    ParameterInfo parameter = parameters[i];
-                    if (typeof(IContainerScope).IsAssignableFrom(parameter.ParameterType))
-                        values[i] = scope;
-                    else
-                    {
-                        try
-                        {
-                            object value = await Get(parameter.ParameterType, scope);
-
-                            values[i] = value;
-                        }
-                        catch (IocConstructorException)
-                        {
-                            //parameter is not registered in service container
-                            //skip to next ctor
-                            failed = true;
-                            break;
-                        }
-                    }
-                }
-
-                //skip to next ctor
-                if (failed)
-                    continue;
-
-                //create with parameters found from the container
-                return Activator.CreateInstance(type, values);
-            }
-
-            throw new IocConstructorException($"{type.ToTypeString()} has no valid constructor");
-        }
-
-        /// <summary>
-        /// Releases item from pool's locked item list
-        /// </summary>
-        public void ReleasePoolItem<TService>(TService service)
-        {
-            ServiceDescriptor descriptor = GetDescriptor<TService>();
-
-            IServicePool pool = (IServicePool) descriptor.Instance;
-            pool.ReleaseInstance(service);
-        }
-
-        /// <summary>
-        /// Creates new scope belong this container.
-        /// </summary>
-        public IContainerScope CreateScope()
-        {
-            return new DefaultContainerScope();
-        }
-
-        /// <summary>
-        /// Gets the service from the container.
-        /// This method is added for Microsost Extensions implementation.
-        /// </summary>
-        public object GetService(Type serviceType)
-        {
-            return Get(serviceType).GetAwaiter().GetResult();
+            _items.Add(descriptor);
+            _provider = null;
         }
 
         #endregion
@@ -862,8 +622,7 @@ namespace Twino.Ioc
         /// </summary>
         public void Remove(Type type)
         {
-            if (_items.ContainsKey(type))
-                _items.Remove(type);
+            _items.RemoveAll(x => x.ServiceType == type);
         }
 
         #endregion
@@ -875,7 +634,7 @@ namespace Twino.Ioc
         /// </summary>
         public bool Contains(Type serviceType)
         {
-            return _items.ContainsKey(serviceType);
+            return _items.Any(x => x.ServiceType == serviceType);
         }
 
         /// <summary>
@@ -886,7 +645,7 @@ namespace Twino.Ioc
             return Contains(typeof(T));
         }
 
-        private ServiceDescriptor MapServiceDescriptor(Microsoft.Extensions.DependencyInjection.ServiceDescriptor item)
+        private TwinoServiceDescriptor MapServiceDescriptor(ServiceDescriptor item)
         {
             if (item == null)
                 throw new NullReferenceException("Service descriptor is null");
@@ -914,16 +673,16 @@ namespace Twino.Ioc
                                          : item.ServiceType;
             }
 
-            ServiceDescriptor descriptor = new ServiceDescriptor(impl, item.ServiceType, implementationType, true, item.ImplementationInstance)
-                                           {
-                                               MicrosoftServiceDescriptor = item,
-                                               ImplementationFactory = item.ImplementationFactory
-                                           };
+            TwinoServiceDescriptor descriptor = new TwinoServiceDescriptor(impl, item.ServiceType, implementationType, item.ImplementationInstance)
+                                                {
+                                                    MicrosoftServiceDescriptor = item,
+                                                    ImplementationFactory = item.ImplementationFactory
+                                                };
 
             return descriptor;
         }
 
-        private Microsoft.Extensions.DependencyInjection.ServiceDescriptor MapToExtensionDescriptor(ServiceDescriptor descriptor)
+        private ServiceDescriptor MapToExtensionDescriptor(TwinoServiceDescriptor descriptor)
         {
             ServiceLifetime lifetime;
             switch (descriptor.Implementation)
@@ -935,7 +694,7 @@ namespace Twino.Ioc
                 case ImplementationType.Singleton:
                     lifetime = ServiceLifetime.Singleton;
                     if (descriptor.Instance != null)
-                        return new Microsoft.Extensions.DependencyInjection.ServiceDescriptor(descriptor.ServiceType, descriptor.Instance);
+                        return new ServiceDescriptor(descriptor.ServiceType, descriptor.Instance);
 
                     break;
 
@@ -945,9 +704,9 @@ namespace Twino.Ioc
             }
 
             if (descriptor.ImplementationFactory != null)
-                return new Microsoft.Extensions.DependencyInjection.ServiceDescriptor(descriptor.ServiceType, descriptor.ImplementationFactory, lifetime);
+                return new ServiceDescriptor(descriptor.ServiceType, descriptor.ImplementationFactory, lifetime);
 
-            return new Microsoft.Extensions.DependencyInjection.ServiceDescriptor(descriptor.ServiceType, descriptor.ImplementationType, lifetime);
+            return new ServiceDescriptor(descriptor.ServiceType, descriptor.ImplementationType, lifetime);
         }
 
         #endregion
@@ -968,9 +727,9 @@ namespace Twino.Ioc
         /// Returns all service descriptors in container
         /// </summary>
         /// <returns></returns>
-        public IEnumerator<Microsoft.Extensions.DependencyInjection.ServiceDescriptor> GetEnumerator()
+        public IEnumerator<ServiceDescriptor> GetEnumerator()
         {
-            foreach (ServiceDescriptor descriptor in _items.Values)
+            foreach (TwinoServiceDescriptor descriptor in _items)
             {
                 if (descriptor.MicrosoftServiceDescriptor != null)
                     yield return descriptor.MicrosoftServiceDescriptor;
@@ -987,17 +746,17 @@ namespace Twino.Ioc
         /// <summary>
         /// Adds new Microsoft Extension service to service container
         /// </summary>
-        public void Add(Microsoft.Extensions.DependencyInjection.ServiceDescriptor item)
+        public void Add(ServiceDescriptor item)
         {
-            ServiceDescriptor descriptor = MapServiceDescriptor(item);
+            TwinoServiceDescriptor descriptor = MapServiceDescriptor(item);
             if (descriptor != null)
-                _items.Add(descriptor.ServiceType, descriptor);
+                _items.Add(descriptor);
         }
 
         /// <summary>
         /// Inserts new Microsoft Extension service to service container
         /// </summary>
-        public void Insert(int index, Microsoft.Extensions.DependencyInjection.ServiceDescriptor item)
+        public void Insert(int index, ServiceDescriptor item)
         {
             Add(item);
         }
@@ -1013,36 +772,32 @@ namespace Twino.Ioc
         /// <summary>
         /// Returns true is service is registered 
         /// </summary>
-        public bool Contains(Microsoft.Extensions.DependencyInjection.ServiceDescriptor item)
+        public bool Contains(ServiceDescriptor item)
         {
-            return _items.Values.Any(x => x.MicrosoftServiceDescriptor == item);
+            return _items.Any(x => x.MicrosoftServiceDescriptor == item);
         }
 
         /// <summary>
         /// Removes a service implementation
         /// </summary>
-        public bool Remove(Microsoft.Extensions.DependencyInjection.ServiceDescriptor item)
+        public bool Remove(ServiceDescriptor item)
         {
-            var kv = _items.FirstOrDefault(x => x.Value.MicrosoftServiceDescriptor == item);
-            if (kv.Value != null)
+            var kv = _items.FirstOrDefault(x => x.MicrosoftServiceDescriptor == item);
+            if (kv != null)
             {
-                _items.Remove(kv.Key);
+                _items.Remove(kv);
                 return true;
             }
 
             return false;
         }
 
-        #endregion
-
-        #region Not Supported
-
         /// <summary>
         /// Method is added to IServiceContainer implementation of Microsoft Extensions.
         /// </summary>
-        public void CopyTo(Microsoft.Extensions.DependencyInjection.ServiceDescriptor[] array, int arrayIndex)
+        public void CopyTo(ServiceDescriptor[] array, int arrayIndex)
         {
-            foreach (ServiceDescriptor descriptor in _items.Values)
+            foreach (TwinoServiceDescriptor descriptor in _items)
             {
                 if (descriptor.MicrosoftServiceDescriptor != null)
                     array[arrayIndex] = descriptor.MicrosoftServiceDescriptor;
@@ -1056,10 +811,10 @@ namespace Twino.Ioc
         /// <summary>
         /// Method is added to IServiceContainer implementation of Microsoft Extensions.
         /// </summary>
-        public int IndexOf(Microsoft.Extensions.DependencyInjection.ServiceDescriptor item)
+        public int IndexOf(ServiceDescriptor item)
         {
             int i = 0;
-            foreach (var v in _items.Values)
+            foreach (var v in _items)
             {
                 if (v.MicrosoftServiceDescriptor == item)
                     return i;
@@ -1075,41 +830,77 @@ namespace Twino.Ioc
         /// </summary>
         public void RemoveAt(int index)
         {
-            Type removeKey = null;
-            int i = 0;
-            foreach (var kv in _items)
-            {
-                if (index == i)
-                    removeKey = kv.Key;
-
-                i++;
-            }
-
-            if (removeKey != null)
-                Remove(removeKey);
+            _items.RemoveAt(index);
         }
 
         /// <summary>
         /// Method is added to IServiceContainer implementation of Microsoft Extensions.
         /// throws NotImplementedException
         /// </summary>
-        public Microsoft.Extensions.DependencyInjection.ServiceDescriptor this[int index]
+        public ServiceDescriptor this[int index]
         {
-            get
-            {
-                if (index >= _items.Count)
-                    return null;
-
-                var descriptor = _items.Values.Skip(index).FirstOrDefault();
-                if (descriptor == null)
-                    return null;
-
-                if (descriptor.MicrosoftServiceDescriptor != null)
-                    return descriptor.MicrosoftServiceDescriptor;
-
-                return MapToExtensionDescriptor(descriptor);
-            }
+            get => MapToExtensionDescriptor(_items[index]);
             set => throw new NotSupportedException();
+        }
+
+        #endregion
+
+        #region Provider
+
+        /// <summary>
+        /// Gets the service from the container.
+        /// </summary>
+        public TService Get<TService>(IContainerScope scope = null) where TService : class
+        {
+            return GetProvider().Get<TService>(scope);
+        }
+
+        /// <summary>
+        /// Tries to get the service from the container.
+        /// </summary>
+        public bool TryGet<TService>(out TService service, IContainerScope scope = null) where TService : class
+        {
+            return GetProvider().TryGet(out service, scope);
+        }
+
+        /// <summary>
+        /// Gets the service from the container.
+        /// </summary>
+        public object Get(Type serviceType, IContainerScope scope = null)
+        {
+            return GetProvider().Get(serviceType, scope);
+        }
+
+        /// <summary>
+        /// Tries to get the service from the container.
+        /// </summary>
+        public bool TryGet(Type serviceType, out object service, IContainerScope scope = null)
+        {
+            return GetProvider().TryGet(serviceType, out service, scope);
+        }
+
+        /// <summary>
+        /// Gets the service from the container.
+        /// </summary>
+        public object GetService(Type serviceType)
+        {
+            return GetProvider().GetService(serviceType);
+        }
+
+        /// <summary>
+        /// Releases item from pool's locked item list
+        /// </summary>
+        public void ReleasePoolItem<TService>(TService service)
+        {
+            GetProvider().ReleasePoolItem(service);
+        }
+
+        /// <summary>
+        /// Creates new scope
+        /// </summary>
+        public IContainerScope CreateScope()
+        {
+            return GetProvider().CreateScope();
         }
 
         #endregion

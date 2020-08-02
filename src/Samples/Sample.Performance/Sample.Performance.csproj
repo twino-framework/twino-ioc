@@ -9,8 +9,4 @@
       <ProjectReference Include="..\..\Twino.Ioc\Twino.Ioc.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="8.0.1" />
-    </ItemGroup>
-
 </Project>

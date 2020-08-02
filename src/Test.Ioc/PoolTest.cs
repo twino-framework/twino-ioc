@@ -11,45 +11,45 @@ namespace Test.Ioc
     public class PoolTest
     {
         [Fact]
-        public async Task Transient()
+        public void Transient()
         {
             ServiceContainer services = new ServiceContainer();
             services.AddTransientPool<ISingleService, SingleService>();
 
             IContainerScope scope = services.CreateScope();
 
-            ISingleService single = await services.Get<ISingleService>(scope);
+            ISingleService single = services.Get<ISingleService>(scope);
             single.Foo = "single";
 
-            ISingleService s1 = await services.Get<ISingleService>(scope);
+            ISingleService s1 = services.Get<ISingleService>(scope);
             Assert.NotEqual(single.Foo, s1.Foo);
 
-            ISingleService s2 = await services.Get<ISingleService>();
+            ISingleService s2 = services.Get<ISingleService>();
             Assert.NotEqual(single.Foo, s2.Foo);
 
             IContainerScope scope2 = services.CreateScope();
-            ISingleService s3 = await services.Get<ISingleService>(scope2);
+            ISingleService s3 = services.Get<ISingleService>(scope2);
             Assert.NotEqual(single.Foo, s3.Foo);
         }
 
         [Fact]
-        public async Task Scoped()
+        public void Scoped()
         {
             ServiceContainer services = new ServiceContainer();
             services.AddScopedPool<ISingleService, SingleService>();
 
             IContainerScope scope = services.CreateScope();
 
-            ISingleService single = await services.Get<ISingleService>(scope);
+            ISingleService single = services.Get<ISingleService>(scope);
             single.Foo = "single";
 
-            ISingleService s1 = await services.Get<ISingleService>(scope);
+            ISingleService s1 = services.Get<ISingleService>(scope);
             Assert.Equal(single.Foo, s1.Foo);
 
-            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<ISingleService>());
+            Assert.Throws<ScopeException>(() => services.Get<ISingleService>());
 
             IContainerScope scope2 = services.CreateScope();
-            ISingleService s3 = await services.Get<ISingleService>(scope2);
+            ISingleService s3 = services.Get<ISingleService>(scope2);
             Assert.NotEqual(single.Foo, s3.Foo);
         }
 
@@ -64,8 +64,8 @@ namespace Test.Ioc
                 IContainerScope scope1 = services.CreateScope();
                 IContainerScope scope2 = services.CreateScope();
 
-                ISingleService service1 = await services.Get<ISingleService>(scope1);
-                ISingleService service2 = await services.Get<ISingleService>(scope2);
+                ISingleService service1 = services.Get<ISingleService>(scope1);
+                ISingleService service2 = services.Get<ISingleService>(scope2);
 
                 Assert.NotNull(service1);
                 Assert.NotNull(service2);
@@ -79,7 +79,7 @@ namespace Test.Ioc
         }
 
         [Fact]
-        public async Task WaitLimitAndGet()
+        public void WaitLimitAndGet()
         {
             ServiceContainer services = new ServiceContainer();
             services.AddTransientPool<ISingleService, SingleService>(o =>
@@ -92,7 +92,7 @@ namespace Test.Ioc
             IContainerScope scope = services.CreateScope();
             for (int i = 0; i < 10; i++)
             {
-                ISingleService service = await services.Get<ISingleService>(scope);
+                ISingleService service = services.Get<ISingleService>(scope);
                 Assert.NotNull(service);
             }
 
@@ -105,7 +105,7 @@ namespace Test.Ioc
             th.Start();
 
             IContainerScope scope2 = services.CreateScope();
-            ISingleService s = await services.Get<ISingleService>(scope2);
+            ISingleService s = services.Get<ISingleService>(scope2);
             Assert.NotNull(s);
 
             DateTime end = DateTime.UtcNow;
@@ -116,7 +116,7 @@ namespace Test.Ioc
         }
 
         [Fact]
-        public async Task WaitLimitAndTimeout()
+        public void WaitLimitAndTimeout()
         {
             ServiceContainer services = new ServiceContainer();
             services.AddTransientPool<ISingleService, SingleService>(o =>
@@ -129,15 +129,12 @@ namespace Test.Ioc
             IContainerScope scope = services.CreateScope();
             for (int i = 0; i < 10; i++)
             {
-                ISingleService service = await services.Get<ISingleService>(scope);
+                ISingleService service = services.Get<ISingleService>(scope);
                 Assert.NotNull(service);
             }
 
             DateTime start = DateTime.UtcNow;
-            await Assert.ThrowsAsync<NullReferenceException>(async () =>
-            {
-                ISingleService s = await services.Get<ISingleService>(scope);
-            });
+            Assert.Throws<NullReferenceException>(() => services.Get<ISingleService>(scope));
             DateTime end = DateTime.UtcNow;
             Assert.True(end - start > TimeSpan.FromMilliseconds(1490));
         }

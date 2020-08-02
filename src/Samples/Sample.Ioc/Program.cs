@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using AutoMapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Twino.Ioc;
@@ -47,30 +48,34 @@ namespace Sample.Ioc
 
     class Program
     {
-        static async Task Main(string[] args)
+        static void Main(string[] args)
         {
             IServiceContainer container = new ServiceContainer();
+            
             container.AddSingleton<IConfigureOptions<Test2>>(new ConfigureOptions<Test2>(t => t.Value = "Hello"));
 
             container.AddTransient<ITest2, Test2>();
             container.AddTransient<ITest3, Test3>();
             container.AddSingleton<ITest, Test>();
 
-            container.CheckServices();
+            container.AddAutoMapper(c =>
+            {
+                
+            });
 
+            var mapper = container.Get<IMapper>();
+            Console.WriteLine(mapper.ToString());
+            
             //optional, for checking missing references and circular references.
             //if there is a missing ref or circularity, throws exception
             //container.CheckServices();
 
-            //var t1 = await container.Get<ITest>();bi
+            //var t1 = container.Get<ITest>();bi
             //var t2 = container.GetService<ITest>();
             //Console.WriteLine(t1.Value);
             //Console.WriteLine(t2.Value);
 
-
-            var provider = container.BuildServiceProvider();
-
-            var test = provider.GetService<ITest>();
+            var test = container.Get<ITest>();
             Console.WriteLine(test.Value);
 
             Console.WriteLine("Hello World!");
